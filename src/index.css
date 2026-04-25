@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-text font-space;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-syne font-extrabold;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-accent-gold to-accent-gold-light bg-clip-text text-transparent;
+  }
+
+  .diagonal-stripes {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 20px,
+      rgba(255, 255, 255, 0.01) 20px,
+      rgba(255, 255, 255, 0.01) 40px
+    );
+  }
+
+  .blur-backdrop {
+    @apply backdrop-blur-md bg-background/80;
+  }
+}
