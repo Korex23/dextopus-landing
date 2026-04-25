@@ -69,7 +69,7 @@ export default function Differentiators() {
                 </span>
               )}
               <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-              <p className="text-text-dim text-sm">{feature.description}</p>
+              <p className="text-xl text-text-dim">{feature.description}</p>
             </Card>
           ))}
         </div>

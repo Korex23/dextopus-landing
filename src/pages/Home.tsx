@@ -1,11 +1,11 @@
 import { Suspense, lazy } from 'react'
 import Layout from '../components/layout/Layout'
 import Hero from '../components/sections/Hero'
+import Flow from '../components/sections/Flow'
 import Stats from '../components/sections/Stats'
 import Products from '../components/sections/Products'
 import Differentiators from '../components/sections/Differentiators'
 import TokenCoverage from '../components/sections/TokenCoverage'
-import Revenue from '../components/sections/Revenue'
 import UseCases from '../components/sections/UseCases'
 import Integration from '../components/sections/Integration'
 import CTA from '../components/sections/CTA'
@@ -31,11 +31,11 @@ export default function Home() {
         }
         transactionWidget={<TransactionWidget />}
       />
+      <Flow />
       <Stats />
       <Products />
       <Differentiators />
       <TokenCoverage />
-      <Revenue />
       <UseCases />
       <Integration />
       <CTA />

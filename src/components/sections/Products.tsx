@@ -17,7 +17,7 @@ export default function Products() {
             <span className="text-gradient">Two products.</span>{' '}
             <em className="font-normal italic text-text-dim">One integration.</em>
           </h2>
-          <p className="text-text-dim max-w-2xl">
+          <p className="text-xl text-text-dim max-w-2xl">
             Deposit brings money into your product from your users. Withdrawal sends
             it out to wherever they need it. Both run on the same two endpoints. Your
             infrastructure stays exactly as it is.
@@ -34,14 +34,14 @@ export default function Products() {
             <h3 className="text-xl font-bold text-accent-gold mb-4">
               Your users fund their accounts from anywhere
             </h3>
-            <p className="text-text-dim mb-4 leading-relaxed">
+            <p className="text-xl text-text-dim mb-4 leading-relaxed">
               A user sends Bitcoin, USDT on Tron, WBTC on Ethereum, SOL on Solana,
               USDC on Celo, GUN on Gunz, or any supported token. Dextopus detects the
               transaction, converts it, and delivers your chosen stablecoin to your
               recipient address. Your user never touches a bridge. You receive exactly
               what you configured.
             </p>
-            <p className="text-sm text-text-dim leading-relaxed">
+            <p className="text-xl text-text-dim leading-relaxed">
               Two address types available.{' '}
               <strong className="text-text">Static addresses</strong> are permanent,
               one per user per network, reusable forever.{' '}
@@ -59,7 +59,7 @@ export default function Products() {
             <h3 className="text-xl font-bold text-accent-gold mb-4">
               Your users get their funds out, on the chain they use
             </h3>
-            <p className="text-text-dim leading-relaxed">
+            <p className="text-xl text-text-dim leading-relaxed">
               A user wants to withdraw to Tron, Bitcoin, USDC on Katana, RON on
               Ronin, ETH on zkSync, or a chain your product has never integrated. You
               generate an address, send the funds to it, Dextopus converts and

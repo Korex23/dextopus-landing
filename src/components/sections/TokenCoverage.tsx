@@ -279,7 +279,7 @@ export default function TokenCoverage() {
               Your users send from what they hold.
             </em>
           </h2>
-          <p className="text-text-dim max-w-3xl">
+          <p className="text-xl text-text-dim max-w-3xl">
             From Bitcoin and USDT on Tron to DEGEN on Degen chain, RON on Ronin,
             GUN on Gunz, and xDAI on Gnosis. The chains winning in emerging markets
             are all here.

@@ -52,7 +52,7 @@ export default function UseCases() {
               that moves money.
             </em>
           </h2>
-          <p className="text-text-dim max-w-3xl">
+          <p className="text-xl text-text-dim max-w-3xl">
             Your business is deployed somewhere. Your customers are on 70+ chains.
             Dextopus connects both directions.
           </p>
@@ -64,8 +64,8 @@ export default function UseCases() {
               key={index}
               className="bg-background-dark border border-border rounded-lg p-6 hover:border-accent-gold/20 transition-colors"
             >
-              <h4 className="text-base font-bold mb-2">{useCase.title}</h4>
-              <p className="text-sm text-text-dim leading-relaxed">
+              <h4 className="text-xl font-bold mb-2">{useCase.title}</h4>
+              <p className="text-xl text-text-dim leading-relaxed">
                 {useCase.description}
               </p>
             </div>

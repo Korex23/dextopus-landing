@@ -48,7 +48,7 @@ export default function Integration() {
             <span className="text-gradient">Live in hours,</span>{' '}
             <em className="font-normal italic text-text-dim">not months.</em>
           </h2>
-          <p className="text-text-dim">
+          <p className="text-xl text-text-dim">
             The Swagger environment runs against production. Make real API calls and
             see real responses before writing a single line of integration code.
           </p>
@@ -73,8 +73,8 @@ export default function Integration() {
                 {step.number}
               </span>
               <div className="space-y-2">
-                <h4 className="text-base font-bold">{step.title}</h4>
-                <p className="text-sm text-text-dim leading-relaxed">
+                <h4 className="text-xl font-bold">{step.title}</h4>
+                <p className="text-xl text-text-dim leading-relaxed">
                   {step.description}
                 </p>
                 <span className="inline-block text-xs font-mono text-text-dim bg-background-dark border border-border px-2 py-1 rounded">
