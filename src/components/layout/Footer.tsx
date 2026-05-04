@@ -4,10 +4,10 @@ import { LOGO_BASE64 } from '../../assets/logo'
 export default function Footer() {
   const currentYear = new Date().getFullYear()
 
-  const footerLinks = [
+  const footerLinks: { label: string; href: string; external?: boolean }[] = [
     { label: 'Privacy', href: '/privacy' },
     { label: 'Terms', href: '/terms' },
-     ]
+  ]
 
   const socialLinks = [
     {
