@@ -137,10 +137,10 @@ function GlobeScene() {
     const globeGeo = new THREE.SphereGeometry(1, 72, 72)
     const globeMat = new THREE.MeshPhongMaterial({
       color: 0xffffff,
-      emissive: new THREE.Color(0x020b18),
-      emissiveIntensity: 0.35,
+      emissive: new THREE.Color(0x062a66),
+      emissiveIntensity: 0.62,
       shininess: 6,
-      specular: new THREE.Color(0x0a2040),
+      specular: new THREE.Color(0x123a75),
     })
     globeMat.map = makeFallbackTexture()
     const globeMesh = new THREE.Mesh(globeGeo, globeMat)
@@ -236,6 +236,10 @@ function GlobeScene() {
       <mesh>
         <sphereGeometry args={[1.10, 32, 32]} />
         <meshBasicMaterial color={0xffb800} transparent opacity={0.018} side={THREE.BackSide} />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[1.004, 72, 72]} />
+        <meshBasicMaterial color={0x0b3f91} transparent opacity={0.12} blending={THREE.AdditiveBlending} />
       </mesh>
       <group ref={globeGroupRef} />
     </>
