@@ -9,10 +9,13 @@ interface HeroProps {
 
 export default function Hero({ globe, transactionWidget }: HeroProps) {
   return (
-    <Section className="min-h-screen flex items-center pt-20">
-      <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
+    <Section
+      className="min-h-screen flex items-center pt-20 lg:py-0"
+      containerClassName="lg:!max-w-none lg:px-0"
+    >
+      <div className="grid w-full items-center gap-12 lg:grid-cols-[52%_48%] lg:gap-0">
         {/* Left Content */}
-        <div className="space-y-8">
+        <div className="space-y-8 lg:pl-[6.5vw] lg:pr-10">
           <div className="space-y-4">
             <h1 className="text-4xl md:text-5xl lg:text-[50px] font-extrabold leading-tight">
               Cross-chain deposit and withdrawal{' '}
@@ -41,16 +44,16 @@ export default function Hero({ globe, transactionWidget }: HeroProps) {
         </div>
 
         {/* Right Content - Globe */}
-        <div className="relative hidden lg:block">
+        <div className="relative hidden lg:block" style={{ height: 'calc(100vh - 60px)', minHeight: '480px' }}>
           {globe || (
-            <div className="w-full aspect-square bg-background-dark rounded-2xl border border-border flex items-center justify-center">
+            <div className="w-full h-full bg-background-dark rounded-2xl border border-border flex items-center justify-center">
               <span className="text-text-dim">3D Globe Loading...</span>
             </div>
           )}
 
           {/* Desktop Transaction Widget Overlay */}
           {transactionWidget && (
-            <div className="absolute bottom-8 left-8">{transactionWidget}</div>
+            <div className="absolute bottom-12 left-6 z-10">{transactionWidget}</div>
           )}
         </div>
       </div>

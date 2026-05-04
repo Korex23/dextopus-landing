@@ -21,8 +21,8 @@ export default function Home() {
         globe={
           <Suspense
             fallback={
-              <div className="w-full aspect-square bg-background-dark rounded-2xl border border-border flex items-center justify-center">
-                <span className="text-text-dim">Loading globe...</span>
+              <div className="w-full h-full bg-background-dark flex items-center justify-center">
+                <span className="text-text-dim text-sm font-mono">Loading globe...</span>
               </div>
             }
           >

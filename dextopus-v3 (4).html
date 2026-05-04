@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dextopus | Cross-Chain Settlement Layer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+:root{
+  --bg:#050508;--bg2:#08080d;--surf:#0c0d17;--bdr:#13152000;--bdr2:rgba(255,255,255,0.09);
+  --text:#d4e0f0;--dim:#8096b0;--gold:#FFB800;--gold2:#FFD060;
+  --glow:rgba(255,184,0,.12);--green:#00DD90;--red:#FF4455;
+  --mono:'JetBrains Mono',monospace;--head:'Syne',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:repeating-linear-gradient(-52deg,rgba(255,255,255,.007) 0,rgba(255,255,255,.007) 1px,transparent 1px,transparent 40px)}
+a{color:inherit;text-decoration:none}
+
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+@keyframes flow{0%{transform:scaleX(0);transform-origin:left}50%{transform:scaleX(1);transform-origin:left}51%{transform:scaleX(1);transform-origin:right}100%{transform:scaleX(0);transform-origin:right}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes txFade{0%{opacity:0;transform:translateY(6px)}10%{opacity:1;transform:translateY(0)}85%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-6px)}}
+
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 52px;height:60px;background:rgba(5,5,8,.9);backdrop-filter:blur(24px);border-bottom:1px solid var(--bdr2)}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--head);font-weight:700;font-size:16px;letter-spacing:-.01em}
+.logo-img{width:30px;height:30px;object-fit:contain}
+.nav-mid{display:flex;gap:26px}
+.nav-mid a{font-size:13px;color:var(--dim);transition:color .2s}
+.nav-mid a:hover{color:var(--text)}
+.nav-right{display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:all .16s;border:none;font-family:'Space Grotesk',sans-serif;white-space:nowrap}
+.btn-gold{background:var(--gold);color:#000}
+.btn-gold:hover{background:var(--gold2);box-shadow:0 0 24px var(--glow);transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid var(--bdr2);color:var(--text)}
+.btn-outline:hover{border-color:rgba(255,184,0,.35);color:var(--gold)}
+.btn-lg{padding:12px 26px;font-size:14px;border-radius:8px}
+
+/* HERO */
+.hero{height:100vh;min-height:600px;display:grid;grid-template-columns:1fr 1fr;padding-top:60px;max-width:1360px;margin:0 auto;padding-left:52px;padding-right:0;align-items:center}
+.hero-left{padding-right:40px}
+.eyebrow{font-size:10px;font-family:var(--mono);color:var(--gold);letter-spacing:.18em;text-transform:uppercase;margin-bottom:18px}
+h1{font-family:var(--head);font-size:clamp(30px,3.2vw,50px);font-weight:800;letter-spacing:-.035em;line-height:1.07;margin-bottom:18px;text-wrap:balance}
+h1 .g{color:var(--gold)}
+.hero-sub{font-size:15px;color:var(--dim);line-height:1.78;margin-bottom:26px;max-width:440px}
+.hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
+.proof{font-size:11px;font-family:var(--mono);color:var(--dim);display:flex;align-items:center;gap:7px}
+.pdot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.8s infinite;flex-shrink:0}
+.hero-right{height:calc(100vh - 60px);min-height:480px;position:relative}
+#globe-canvas{position:absolute;inset:0;width:100%;height:100%}
+
+/* TX WIDGET */
+.tx-overlay{position:absolute;bottom:48px;left:24px;width:290px;background:rgba(12,13,23,0.95);border:1px solid var(--bdr2);border-radius:14px;padding:20px;z-index:10;animation:fadeUp .8s ease .4s both;backdrop-filter:blur(12px)}
+.tx-overlay::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.tx-tag{font-size:9px;font-family:var(--mono);color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.tx-type-badge{padding:2px 8px;border-radius:4px;font-size:9px;font-family:var(--mono);margin-left:auto}
+.tx-type-deposit{background:rgba(0,221,144,.1);color:var(--green);border:1px solid rgba(0,221,144,.2)}
+.tx-type-withdraw{background:rgba(255,184,0,.1);color:var(--gold);border:1px solid rgba(255,184,0,.2)}
+.tx-blk{background:rgba(8,8,13,0.8);border:1px solid var(--bdr2);border-radius:8px;padding:13px 15px;margin-bottom:6px}
+.tx-lbl{font-size:9px;font-family:var(--mono);color:var(--dim);margin-bottom:5px}
+.tx-amt{font-size:18px;font-family:var(--mono);font-weight:600;letter-spacing:-.02em;line-height:1;margin-bottom:4px}
+.tx-ch{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)}
+.pip{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.tx-mid{display:flex;align-items:center;padding:5px 0;margin-bottom:2px}
+.tx-line{flex:1;height:1px;background:var(--bdr2);position:relative;overflow:hidden}
+.tx-line::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:flow 2.2s ease infinite}
+.tx-arr{padding:0 10px;color:var(--gold);font-size:12px}
+.tx-foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:12px;border-top:1px solid var(--bdr2)}
+.tx-status{display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:var(--green)}
+.tx-time{font-size:10px;font-family:var(--mono);color:var(--gold)}
+.tx-slide{animation:txFade 5s ease forwards}
+
+/* STATS */
+.stats-wrap{background:var(--bg2);border-top:1px solid var(--bdr2);border-bottom:1px solid var(--bdr2)}
+.stats-inner{max-width:1280px;margin:0 auto;padding:0 52px;display:grid;grid-template-columns:repeat(4,1fr)}
+.stat{padding:28px 0;text-align:center;border-right:1px solid var(--bdr2)}
+.stat:last-child{border-right:none}
+.stat-n{font-family:var(--head);font-size:36px;font-weight:800;color:var(--gold);letter-spacing:-.04em;line-height:1;margin-bottom:5px}
+.stat-l{font-size:12px;color:var(--dim);line-height:1.5}
+
+/* SECTIONS */
+.sec{max-width:1280px;margin:0 auto;padding:88px 52px}
+.sec-ey{font-size:10px;font-family:var(--mono);color:var(--gold);letter-spacing:.16em;text-transform:uppercase;margin-bottom:14px}
+h2{font-family:var(--head);font-size:clamp(24px,2.6vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:16px;text-wrap:balance}
+h2 em{font-style:italic;font-weight:400;color:var(--dim)}
+.sec-sub{font-size:15px;color:var(--dim);line-height:1.78;max-width:520px}
+
+/* PRODUCTS */
+.prod-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:48px}
+.prod-card{background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;padding:32px;position:relative;overflow:hidden;transition:border-color .2s}
+.prod-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:0;transition:opacity .3s}
+.prod-card:hover{border-color:rgba(255,184,0,.28)}
+.prod-card:hover::before{opacity:1}
+.prod-seq{font-size:10px;font-family:var(--mono);color:var(--dim);margin-bottom:20px;letter-spacing:.1em;text-transform:uppercase}
+.prod-icon{font-size:26px;margin-bottom:16px;display:block}
+.prod-card h3{font-family:var(--head);font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:10px}
+.prod-card p{font-size:14px;color:var(--dim);line-height:1.75;margin-bottom:20px}
+.prod-tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:9px;font-family:var(--mono);color:var(--gold);background:rgba(255,184,0,.07);border:1px solid rgba(255,184,0,.14);padding:4px 8px;border-radius:4px}
+
+/* DIFF */
+.diff-bg{background:var(--bg2);border-top:1px solid var(--bdr2);border-bottom:1px solid var(--bdr2)}
+.diff-header{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:end;margin-bottom:52px}
+.diff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.diff-card{background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;padding:26px;position:relative;transition:border-color .2s}
+.diff-card:hover{border-color:rgba(255,184,0,.22)}
+.diff-new{position:absolute;top:14px;right:14px;font-size:9px;font-family:var(--mono);color:var(--gold);background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.2);padding:2px 7px;border-radius:4px;letter-spacing:.08em;text-transform:uppercase}
+.diff-icon{font-size:20px;margin-bottom:14px;display:block}
+.diff-card h4{font-family:var(--head);font-size:15px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
+.diff-card p{font-size:13px;color:var(--dim);line-height:1.68}
+
+/* TOKEN TABLE */
+.tok-wrap{overflow-x:auto;margin-top:44px}
+.tok-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;min-width:600px}
+.tok-card{background:var(--surf);border:1px solid var(--bdr2);border-radius:8px;padding:16px 18px}
+.tok-chain{font-size:11px;font-family:var(--mono);color:var(--gold);margin-bottom:10px;font-weight:600}
+.tok-list{display:flex;flex-wrap:wrap;gap:5px}
+.tok-pill{font-size:9px;font-family:var(--mono);color:var(--dim);background:rgba(255,255,255,.04);border:1px solid var(--bdr2);padding:3px 7px;border-radius:4px}
+
+/* CHAINS */
+.chain-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:44px}
+.cpill{display:flex;align-items:center;gap:0;padding:5px;background:var(--surf);border:1px solid var(--bdr2);border-radius:100px;font-size:0;color:var(--dim);transition:all .2s;position:relative;cursor:default}
+.cpill:hover{border-color:rgba(255,184,0,.4);z-index:10}
+.cpill:hover .cpill-tip{opacity:1;transform:translateY(0);pointer-events:none}
+.chain-icon{width:28px;height:28px;border-radius:50%;background-size:cover;background-position:center;background-repeat:no-repeat;background-color:var(--bg2);flex-shrink:0}
+.cpill-tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%) translateY(4px);background:#1a1a2e;border:1px solid var(--bdr2);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--text);white-space:nowrap;opacity:0;transition:all .15s;pointer-events:none;font-family:var(--mono)}
+.cmore{padding:8px 14px;background:rgba(255,184,0,.07);border:1px solid rgba(255,184,0,.15);border-radius:100px;font-size:12px;color:var(--gold);font-family:var(--mono);cursor:pointer;position:relative}
+.cmore:hover .cmore-drop{display:flex}
+.cmore-drop{display:none;position:absolute;bottom:calc(100% + 8px);right:0;background:#0e0f1a;border:1px solid var(--bdr2);border-radius:12px;padding:12px;gap:6px;flex-wrap:wrap;width:240px;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,0.6)}
+.cmore-drop .chain-icon{width:24px;height:24px;cursor:default}
+.cmore-drop .chain-icon:hover .cpill-tip{opacity:1}
+
+/* TX WIDGET LOGOS - background-image approach to bypass content-type issue */
+.tx-logo{width:24px;height:24px;border-radius:50%;background-size:cover;background-position:center;background-repeat:no-repeat;background-color:var(--bg2);flex-shrink:0}
+.tx-logo-sm{width:14px;height:14px;border-radius:50%;background-size:cover;background-position:center;background-repeat:no-repeat;background-color:var(--bg2);flex-shrink:0}
+.tx-amt-row{display:flex;align-items:center;gap:8px}
+.tx-ch{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim);margin-top:4px}
+
+/* TOK CARD WITH CHAIN LOGO */
+.tok-card{background:var(--surf);border:1px solid var(--bdr2);border-radius:8px;padding:12px 14px;transition:border-color .2s}
+.tok-card:hover{border-color:rgba(255,184,0,.2)}
+.tok-chain-hd{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.tok-chain-logo{width:40px;height:40px;border-radius:50%;background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0}
+.tok-chain{font-size:11px;font-family:var(--mono);color:var(--gold);font-weight:600}
+
+/* REVENUE */
+.rev-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+.fee-block{background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;padding:26px}
+.fee-ey{font-size:10px;font-family:var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:18px}
+.fee-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--bdr2)}
+.fee-row:last-child{border-bottom:none}
+.fee-lbl{font-size:13px;color:var(--dim)}
+.fee-val{font-size:13px;font-family:var(--mono);color:var(--gold);font-weight:600}
+.rev-ex{background:var(--bg);border:1px solid var(--bdr2);border-radius:10px;padding:18px 20px;margin-top:14px}
+.rev-ex-hd{font-size:9px;font-family:var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+.rev-ex-row{display:flex;justify-content:space-between;font-size:13px;color:var(--dim);margin-bottom:5px}
+.rev-ex-row.tot{font-size:14px;color:var(--text);font-weight:600;border-top:1px solid var(--bdr2);padding-top:9px;margin-top:5px}
+.rev-big-block{background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;padding:24px;margin-top:14px}
+.rev-big{font-family:var(--head);font-size:44px;font-weight:800;color:var(--gold);letter-spacing:-.04em;line-height:1;margin-bottom:8px}
+.feat-list{list-style:none;margin-top:22px;display:flex;flex-direction:column;gap:10px}
+.feat-list li{display:flex;gap:10px;font-size:14px;color:var(--dim);line-height:1.65}
+.feat-list li::before{content:'→';color:var(--gold);font-family:var(--mono);flex-shrink:0;font-size:12px}
+
+/* USE CASES */
+.uc-bg{background:var(--bg2);border-top:1px solid var(--bdr2);border-bottom:1px solid var(--bdr2)}
+.uc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:46px}
+.uc-card{background:var(--surf);border:1px solid var(--bdr2);border-radius:10px;padding:26px;transition:border-color .2s}
+.uc-card:hover{border-color:rgba(255,184,0,.2)}
+.uc-card h4{font-family:var(--head);font-size:15px;font-weight:700;margin-bottom:8px;letter-spacing:-.01em}
+.uc-card p{font-size:13px;color:var(--dim);line-height:1.68;margin-bottom:14px}
+.uc-card a{font-size:12px;color:var(--gold);font-family:var(--mono)}
+
+/* INTEGRATION */
+.int-grid{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:start}
+.step{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:20px 0;border-bottom:1px solid var(--bdr2)}
+.step:last-child{border-bottom:none}
+.step-n{font-size:11px;font-family:var(--mono);color:var(--gold);padding-top:2px}
+.step-body h4{font-family:var(--head);font-size:15px;font-weight:700;margin-bottom:4px}
+.step-body p{font-size:13px;color:var(--dim);line-height:1.65}
+.step-badge{display:inline-block;font-size:9px;font-family:var(--mono);color:var(--dim);background:var(--bg2);border:1px solid var(--bdr2);padding:2px 7px;border-radius:4px;margin-top:7px}
+
+/* CTA */
+.cta-wrap{border-top:1px solid var(--bdr2);text-align:center;position:relative;overflow:hidden}
+.cta-wrap::before{content:'';position:absolute;top:-140px;left:20%;right:20%;height:300px;background:radial-gradient(circle,rgba(255,184,0,.05) 0%,transparent 70%);pointer-events:none}
+.cta-inner{max-width:1280px;margin:0 auto;padding:96px 52px;position:relative}
+.cta-inner h2{font-size:clamp(28px,3.5vw,50px);margin-bottom:14px}
+.cta-inner h2 .g{color:var(--gold)}
+.cta-inner p{font-size:15px;color:var(--dim);margin-bottom:32px}
+.cta-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* FOOTER */
+.foot-inner{max-width:1280px;margin:0 auto;padding:32px 52px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--bdr2);flex-wrap:wrap;gap:16px}
+.foot-logo{display:flex;align-items:center;gap:8px;font-family:var(--head);font-weight:700;font-size:14px}
+.foot-logo img{width:22px;height:22px;object-fit:contain}
+.foot-links{display:flex;gap:20px;flex-wrap:wrap}
+.foot-links a{font-size:12px;color:var(--dim);transition:color .2s}
+.foot-links a:hover{color:var(--text)}
+.foot-right{display:flex;align-items:center;gap:16px}
+.soc{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);transition:color .2s}
+.soc:hover{color:var(--gold)}
+.foot-copy{font-size:10px;color:var(--dim);font-family:var(--mono)}
+
+/* MOBILE TX WRAP - hidden on desktop, shown on mobile */
+.mobile-tx-wrap{display:none;transition:opacity .25s ease}
+.mobile-tx-wrap .tx-blk,.mobile-tx-wrap .tx-tag,.mobile-tx-wrap .tx-foot{transition:opacity .3s ease}
+@media(max-width:768px){
+  .mobile-tx-wrap{display:block}
+}
+.ham{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px}
+.ham span{display:block;width:22px;height:2px;background:var(--text);border-radius:2px;transition:all .3s}
+.mobile-menu{display:none;position:fixed;top:60px;left:0;right:0;background:rgba(5,5,8,.98);backdrop-filter:blur(24px);border-bottom:1px solid var(--bdr2);padding:24px 24px 32px;z-index:199;flex-direction:column;gap:0}
+.mobile-menu.open{display:flex}
+.mobile-menu a{font-size:16px;color:var(--dim);padding:14px 0;border-bottom:1px solid var(--bdr2);display:block;transition:color .2s}
+.mobile-menu a:last-child{border-bottom:none}
+.mobile-menu a:hover{color:var(--text)}
+.mobile-menu .mob-ctas{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+
+@media(max-width:768px){
+  /* NAV */
+  nav{padding:0 20px}
+  .nav-mid{display:none}
+  .nav-right{display:none}
+  .ham{display:flex}
+
+  /* HERO */
+  .hero{grid-template-columns:1fr;height:auto;min-height:auto;padding:100px 20px 0;gap:0;overflow:visible}
+  .hero-left{padding-right:0;padding-bottom:32px}
+  h1{font-size:clamp(28px,7vw,40px)}
+  .hero-sub{font-size:14px;max-width:100%}
+  .hero-right{height:0;min-height:0;display:none}
+  .tx-overlay{position:static !important;width:100% !important;left:auto !important;bottom:auto !important;border-radius:0;border-left:none;border-right:none;border-bottom:none;border-radius:0;animation:none;padding:24px 20px;margin:0 -20px;width:calc(100% + 40px) !important;box-sizing:border-box}
+  .tx-overlay::before{display:none}
+  .tx-amt{font-size:16px}
+
+  /* STATS */
+  .stats-inner{padding:0 20px;grid-template-columns:repeat(2,1fr)}
+  .stat{padding:20px 0;border-right:none;border-bottom:1px solid var(--bdr2)}
+  .stat:nth-child(odd){border-right:1px solid var(--bdr2)}
+  .stat:nth-child(3),.stat:nth-child(4){border-bottom:none}
+  .stat-n{font-size:28px}
+
+  /* SECTIONS */
+  .sec{padding:64px 20px}
+  h2{font-size:clamp(22px,6vw,32px)}
+
+  /* PRODUCTS */
+  .prod-grid{grid-template-columns:1fr}
+
+  /* DIFF */
+  .diff-header{grid-template-columns:1fr;gap:16px}
+  .diff-grid{grid-template-columns:1fr 1fr}
+
+  /* TOKEN TABLE */
+  .tok-grid{grid-template-columns:repeat(2,1fr);min-width:0}
+
+  /* REVENUE */
+  .rev-grid{grid-template-columns:1fr;gap:40px}
+
+  /* USE CASES */
+  .uc-grid{grid-template-columns:1fr}
+
+  /* INTEGRATION */
+  .int-grid{grid-template-columns:1fr;gap:40px}
+
+  /* FOOTER */
+  .foot-inner{padding:24px 20px;flex-direction:column;align-items:flex-start;gap:20px}
+  .foot-links{gap:14px}
+  .foot-right{gap:14px;flex-wrap:wrap}
+
+  /* CTA */
+  .cta-inner{padding:72px 20px}
+}
+
+@media(max-width:480px){
+  .diff-grid{grid-template-columns:1fr}
+  .tok-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <img src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCAGQAZADASIAAhEBAxEB/8QAHQABAAICAwEBAAAAAAAAAAAAAAcIAgYBBAUDCf/EAFIQAAIABAIFCAUIBgYHCQEAAAACAQMEBQYSBxEiMkIIITFSYnKCkhMUQVGiFSNhcYGRssIzQ6GxwdIWJDREU3MXJUZUhJTRGCY2VVZjdKPw8v/EABwBAQACAwEBAQAAAAAAAAAAAAAFBgMEBwIBCP/EADoRAAEDAgQDBQcDAwMFAAAAAAABAgMEBQYREiEiMTITQVFhgRQzQlJxkaEVQ7EHFiMk0fA1U2Jjwf/aAAwDAQACEQMRAD8ApkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD6R5/brOP2GUFjHohE2ewYDxdiCEJlqsFdPlNuv6LKnmbUp8lmjibm9yIh6bG53JDVTmBMVp0AYxqsrVtTbLfDqvOZ3+5Fb95slDycZMNTV2K218SyaP+MXIebEdth6pU/k2mW+d3wlev8A90j/APdJZteTthmH6S93Vu6iL+UNydsKxXZvV3WPdRvyml/d9q+f8KZP0yfwKxZQWTq+TnaGhro8S1if5tKrfuaB4Vw5Od5lx/qGILfU9mYjym/ibUWJ7XJylPLqCdvwkEj7SSbxoa0gW1s3yN64i8VJNWb8O98Jo90tdytk/wBBcKCppJvVnSmSP7SUgrIKn3b0X1NV8T2c0PMBllMTYMYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABnlOD7yJUydNhKlozuzaoQWGuLRJs0aaC624LKuOK2egpm2kpYfp3h2uovxfUaldcKehj7SZ2RnggfO7JhElisd1vlfCitFDPrqh+hJKRb7foh9MSY8F8nytqIJU4quK0iNterUmp38Tbq+HMTxh2w2jD1uWhstukUcld5UXaftM28zd49PmOc3TG80iqykTJPHvJymtLG7ymrYX0eYPw4q/JlkpPTL+unL6ab5n3fDlNp19Ucw8RS6m4VFS7OV6qSzIY425NacAAjzIAAAAAAIHyrqSlrpMZFZTSKmS28k5FdfKx9QZ455IlzY4xuY1xHOKNC+BryrPIoZlqnN+to3yp5GzL5cpEmL9AeJbZnn2WokXiTDnVE+am+VtlvCxaHnHeLLQ4suFLs52pPM0pbdDL5FCrrba+2Vj0txop1JPSOVpc6XFXh9kTox3vaXxxFYLHiGk9VvVqpq6V/7qZmTuvvL4WIVx5yf1ZXrMH1kc3T6jVv8KP8AlbzF7tmMaOryZNwO/BEVNqkj4mboV36DiHPE9K+Wa5WWvm0Fzo59JUyt+XNTKynmlua5rk1N5EY5qt2UxAAPIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB9NWttXQe5hPDl2xPd5VrtFLMn1D+5dlF4maPCsDtYEwldcY31LZbJfPvTZz7kpOJ2Yt5gDB1pwbZUt1sl5njljUVMV26hus3Z6q8JXr9iGK1x5Ju9e4kKOhdUOzXkeDoq0WWXBshKqesu4XjLt1LpsyuzKVt3vbzdk3/AHWA1HHa+51FfL2kzsyzQwshZk0AAjTOAAAAAAAAAAAAAAAAAAAAAeFjXCNjxdbWo71RrMyr81OXZmyG6yt+XdKsaUNGt3wTXQmTV9atk2YyyKtIalj2XhwN9Ht9hcQ690oKO50E6huNMlTSz1yvKdcyspcLFiia3vSOTdhHVtvZO3U3ZSghjz6yT9M2jOpwXXtWUazKizVDssidGGtpUf8ADf6fc3ERj7Dr1LVRVUTZYnZopV5YnRO0uMAAZzGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZx6YnKw1sqjo5jY9Gtp+Wsd2a2MuZJ1XLg8OzCOZvhhE+SvRkbnr3HpjdTkQttokwpR4TwVRUsqQsutnSEnVr8bzWXNlbsrmyqptXCOmOzsqF6NZ+fLhVvq53yvXmpdYY2xxta0AAjjMAAAAAAAAAAAAAAAAAAAAAAAAAAAdW9WyhvFpqLZc6eXPpKhMkxG4l7PVZd5WKd6VcE12BsSvQvmm0U7M9HUZcvpU+ntL0ND/AKlzjXNI+E7fjLDc601Sqk7fpZ2XM0qbwt3eFl6pc8L391BN2UnQ78EbcKNs7NTeaFHTmGs9O/2isst4qrVcZDSKqndkmI3Cx5mvVznY2qjmo5vJSrObpXJTAAHw8gAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAPp/1JL5NdL6fSzbXj+oSbNX64S2/6kaQ9n1kqcl7L/pUk5v90qPwEdd3K2hlVPlU2aVucrfqWvAB+fVLoAAeQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAARByjMAfLtobE1skf6zoJf9Ygq7VRIhxd5Pw5uqpVt1jCOo/QMq5p70bz8O3ade7PRTJlmqos8ciNFaV+JG9y+1Y+H2HVsHX7tY/Y5l3TkV650X7jCGwZGJfyDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAZrvEj8nmsWj0sWeLNlWfnkR8aMv7yOuE9TC1ymWbEdtusvepKqXOh4WhE16yHt6d8fiimaB+iRql7oAwp5yVEpJ8plmSpqK6MvErLmX4TNj88zR6JHNLqxwABgPQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAExVdGluqsrLlZWXMrKAZGPcx2pp8yIZ0raEqC7pOuuE0ShuG89J+qnd3qN8PdK211FU26snUdZImSKiS7JMluuVlZemEYF+G5ugivT3o5lYntL32108FvVJLzPBYbVUi8LdpV3W8PVOj4axU9HpS1bs07lIOutzclfGVMBm6sjZYmB0or4AAAAAAAAAAAAAAAAAAAAAAAAAAAMlbKxiAC4PJ4xMt/0eUtLNmZqu2N6rNhxMnA3l2fASN2inuhHGccH4xlT57RjbapfQVcI8KRjzP9attfeXClvLmy0my3WZKZVZGRsysrbrKcdxda3UdWszel5a7bU9rFp70AAKYSQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHEAemuVFPhU7lDYThhvHD1dNKy0F0WNRKVehH418219TEXZs3NEt3yi8OrftHNRUypeaqtbetS+tk3XXy7XgKiRhr5zuuGbitdQMc7qTZSo3CDsply7z5AAnjRAAAAAAAAAAAAAAAAAAAAAAAAAAAM116+YsRydNJctpMnB19nqrLs26odv/AKmb8Pl6pXeMNTGct2SYrq0VaHRE0rlborhA6GUzwTvgfqafoCNqJBWhbTLLnJJsOLqlZc6Cqkivm7r9VZseGPb83WJ1hHNBW3oNzqcTu1mqLbLokTh8S2U1SydmaAAEGbQAAAAAAAAAAAAAAAAAAAAAAAAGoBmVdpmVV3czbJ7YxzuR51DUDnVs5trL7zgPY5vUNQAB4PRjOkyqqQ9NNRZkqajSng3ErbLL5WKHYhovUL5XUXsp6h5XP2WjD+BfPojmKU6XqCbbtI9+pZq5W9cd1h71ds6/CynTMAy8UsefgQV5j2a404AHSSvgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGa83RElXRbphvGE1S23BWuVoXZWU77clew35W2fqIqj07pxrMFVSw1cXZzNzQyxTPiXNil6MG4vw9iyi9Zslek9lXM8ltmbK7y73iXZPd7pQi3V1XbqxKyhqZtNPltmSbKeKssfojAmHBGny80CyqbElMt1krs+sJlSfBe1wv8Abq+s51dcDvRVfRuzTwJymuyLtKWW5gapgvSLhLFrJItVxVat4f2ScuSb4V3W8LMbXs8JRKyinpH6JmZKS0czJEzauYABomYAAAAAAAAAAAAAAAAAAcRVPlHV96fSVW0tZOnrTSsjUcrOyy/RNLWOZYfTz64lrCP9NOj9Ma2dKmhVZd4olb1Z22VmpvNKZvihH2R7xb8JXCCjrc502dt9COuUT5YuEq3Y8WYisk+E613qup2hwpPbL4odESx2g3SlMxjns16WVLu0iXnSYnMtQi72zwuvxL3Ss14st1s9Y1Lc6CopJ680VnS2Uk7k24Xu9ZjWkv6ypsmgoM8Zk6KxVXaKNBUWPtjtbXuU6JiCjoZ6F8j8uWykLRyTsmRpaEAHDC1iBV7lY0iStIFJUS1ytUW5Hmd5WdfwqpaGBV3lX1PpdIdNIX+7W6UnmZ3/ADF4wLn7e76ETd/ckNARB10rAAAAAAAAAAAAAAAB9Yw92Y+9JS1NTMhLpqeZOePMqIkWi33Hs4Rm4TlXHPimVc59Km7KosixfvMzbP2E54T0saKLBIWRaLJW2xcuVnWlR3bvPnzMR9fWTU7c4olepsQRMf1OyIps+iHH9zly3l4em08t91qmYsr4Wjm/Ye7Tcn/HUzV6VrVI79Vr/DBiarXpi0e18yEtb6tM7f7zIdF82XKbpbblbrrKhPtldSVyMubXJmq6/CUisxPeYHZug0p9FJeG30r/AIytEzk8YxVMy3Cys3u9O/8AIebcNBmP6VGmS6ClqtXDJqki33NqLZgjW45rmu4mobH6RC4o1fcJYjseuN2sddSQ982VGC/eeDkaHNE/QPeRpbbStvK26xpmLdGODMRwaZVWeTTVDf3ik+afN9Krsx8Sk5RY8gkXKoZp+hqS2ZydClL+Ee0mXHegm/WhZtZh+bC9Uq7UZarlnqvd4vD9xD9TJnSJzyp0t0dY6mg0MuqJdKOvp6xmuF+ZEywPhXJ6HWABsmEAAA7lHVT6SoSfImPKmo0GR0bLFWh9JZHRHpopLnLk2XFk2XTVuykqubmSf2X6rdroj2SsnREz188MsNRH3K009yi0TJ6+BngqXwOzafoFtRXZ3RDLxFUdF2mG84VyW25Qa62mGyqM+qbIh2Gjw9ltn6ixeDMcYXxZJVrLc5cydlzPTTdienhbe7y5lOS3fC9Xb3K5E1M8ULPTV0U/fkpsYAKtkb4AB5AGoDhVuFt1j2jXOPgAB4PoAAAAAAAAAmSkmLlmpLmL1XXN+IKqoqqiqqruquyqgGft5HN0q486WgAGA9DtFSOUnS1lPpVuE+qXKlQkp5LexkyKv71YtwvV6xD/ACocNLc8Hyr/ACZcPWLXM1PGC87SnbU33Plj4mLlgytZTV2l/wAexG3SJXxbFVwZdDGJ2MqgAAAAAAAAAAAAAAAAABkd2319XQVEKijqZ9NNXoeTMijQ+2B0DIK1rkycCVcL6b8Z2ZpcqsqJd4p12clWuZ9X0OupvNmJpwJpjwpiWKU9XP8Akiubm9DUvDI7dl93zZSojw+nWca/dAgLhhmgrm7s0u8UN+C4zQ9+Z+gfdHQVG0baW8Q4RmSqWof5TtUNmNNObnRew+8n1bvZLMYGxlYMY2/1yy1SzHRVabTPszZHeXq9pdk5pecL1FuXWnEzxJ+muDJ+HkpsO1xGn6Q9HGG8aSHmXCR6tcOiXWyVVXXv9de95jcec4Iakr56J6PhdkbM0LJG5OTMplpH0c4gwRVN67I9ZoGbLKrpKxaW/wBfVbsxNJhGGvpL/VlJTVtJNo6ymlT6eauWZKmpmR16rKV/0q6DptO0674LltNlbz25o5nX/KbjXsttd46fYsXRVeUVTwv/AApX6y2Oj4o90K+g7E+TMkzYypstkdI6orGGptZ8NRdEdq5EQcAAA51nZpp82RNSbKmvLmI2ZYq2WMI+/WdUBW6uYJcwdpzxbZMlPc3l3qjhs6qnmmqv0Ou15sxLmHtOWCLnLRK6ZV2ic3MyzkzJr7yZviVSpjfTA4XV7SBrsM2+tXNzMl8jfiuM0XfmXxtN/sN2TParxb6td75moRm8ubMem0GhvKy95T8/UmvLbMrMrQ9sD3bXjHFFsjCFDiC5yFhwpVPl+7WVmfALFX/FL9zfjvPzNLyq20zLvFZ71iu8aOdMddSyqyqnWZav0j0MZkYpGTNhn2VbZgy59ntQNRptLukOnj/4nq5iw4Zqo/4oHgYrxJdcU3b5TvFTCfWZFlZ1lqmtV3eZYEjY8LS0CvbOqOY5DFVXBJtLmbKheGnnyqmllT5D55M1FdHhxoy5lbymfAePgSW6YJsaNstC3U8G8inscJyyujbDO5je5SwRu1Na4DXEZcxCvKSveIsMV1ouVju9ZQy6hHlTklTdjOjKytl3c2pvhU2rRbFuVR2CO0qeKmdIGa1QmqKx3RHqlf8AQVpNxRfcbybHfLktbTzpE2CZpSKyuq51bMsINwxXxFgPbtGS82eW1zNjkXM80k7J2akAAII2QAABqHN7xwmoz9JuBKa+NaJ99kpUrMyNHI8ZSt2ny5fiN+lop6nPsWK7LwMckjGdS5G3HVvVvkXa1VdsqF+aq5DyX7rrlO1vR7IMcMrqeZrk5oHN1R5FCLtST7dc6q31C5ZtPOeW8O0sdUf3HSbpJF5Q1s+S9Kt0yrlSqZKtIQ7aqzfFmI61H6Eo5kqIGSJ8SFKmZoeqGAAMxjAAAAAAAAAAAAAAAAAAAAAMtR6lhvNxslylXG2Vk2kqZTZkmSmysp5evnOef2n1Wtc1WuTND01zmuzQtpog0tW/FySrVdvRUd8y5VWGylV2l6r9nykoFAJM2ZJmwmS3ZHWOtYw5tUSyOhfTDLr4U+H8WVawq9lKe4PHKs3qy3jwt7m4uLnOa4jwjlnUUfqn+xPUNyz4JCboAA5txMd5k4R/pR0WWTG0p6pctvvHDVomy/ZdeLvb3eKw41whf8JXRqO90cZOb9FNXnlTV6yt7f3l3o9PMdK+Wm2X23Tbdd6OVV0j8E3a2usrcLdpS6WPFs9FlFPxM/KEVWW5kvEzZSg5lBYe8nPSXoJrqGM244Ri9fSbzUkf06Q7PXX4u8QpVyJtLOeVOktKmo2V0ZYwZY+6MInU6K4U1bHrhdmV+WB8C5PQ6YANswAAAAAAH1hDajzm2aL8Kz8XYwo7Smb0MXz1Dw4JS87R/h9cYGvWi31l1uEmhoZEyfVT3gkqUi5ouxbzQ3gCRgiwNCf6OddqpVaqmrzqvVRW6q/E3hIS/wB5jttKu/GvJDeoaR07/I3mWsuWiypaLLRFVEVeFV3VMgIHCpJHPdqcW1uwToiQtyuVVsI2Z+Ja91Xu5Nr8Kk0kCcr2vgtHYLYrbTPPqGXs7Kr+YsuEGq66R5ef8Glcnf6dxGegFm/0uWDL/jxh8DFx13FKl8mWiar0p0c3LmWlkTpzfRsZV+JlLaErj1yLWRonymrZm/4XAAFAJkAAAwqpTTqWbIVmVnR0Vl3lZlylCK1Hk1s2W++kxlb64MX7VsrK3VYo1pFpVoseXylTdlXGeq/VnY6dgF+aSs+hBXhu7XFvtFFc9w0a2Cqmuzu1EivFt5mTMn5DZuE0Dk9zmnaI7Nm4PSp5Zr/zG/qUm9R9ncJWp8ykrSu1RNUrlyuaD0d9stxgv9opHlNHtI+b8LkD+wsnyvaeEbHYqn2pUT08ypH+BWyPSdgwxN2lriUrFwbpncYgAnTRAAAAAAAAAAAAAAAAAAAAAAAABkscsTEAE/6EtL8aFpOGsVz29U5kpa545mk9VHj7U6seHu7tiEZXgrKytBlzKy7rKfn4sYQjHmJo0J6XZ1h9DYsSzYz7RuyJ0dp6Xs9pOzw8PVKJiXCzajOppU4u9PEmaG5aOCTkWbaAUwp50qfTyp8iak2TNRWR0bMrq26ytxKZnK5I3Ru0uLE1dW45sxrOOMA4XxhKb5WoVaoy5Uq5OxNXxcXdbMbNzDmNimrp6V+uJ6op5kjbImT27FZMZaBMQW7PPw/US7vIVsyy46pU+C91tlvC32EUXiy3S01TU1zt9TRzl5mSdKZI/EXyjqPlWU1NWSWkVlNKq5LLlZJyK6+Vi70GO5WJpqGaiKlszHbsXIoFFeyxxzxLpXTRfo/uDRafhmiRo70ZLPK/AynlS9CejuD52tNQ0PdGrfL+8nmY5typujvsaTrPL3FRMjM2VVaJv2CdFGLsTtKmyLe1DRO3PV1axRMv0cTeGBaKw4HwlYXg9rw9b5Exd2ayZ3XxPmY2He6SLrseJp00rPVTPDZu+RTTtGmjmx4Ipc1KvrNxdcs2tmrtMvVSHAv4uI3EA5/W189bL2szs1JmGFkbdLQADRMwbahrgU908YkXEmkOum08z0lLSaqWRFd1lTebxNmYn3T1jhMJ4Ueio5uW7XCW0qQqttSk3Wm/lXtd0qlYLbWXy80tropTTamqmrKRF4mZjqeCrX7PG+tl28PoV+6z9o5Imk+ckywPJt9yxJNTL6dlpKdsvSq7bt9+RSdjysIWOnw1hqhslLtJSylVo9d9538TMzHrcRSsQV/t1c+Xu7iVooOyiRDgAEAbYAAA4SlGl6KtpNxFl3fX5v4i7Ev9JD6yi2OKr1/GV3rodFRWTZnmdjpP9P2ccrvoQV5XZqFn+Ta2bRJb4dWonw+Mkkjzk7070+iS051/SvNmr3Wdv5SQypX9dVymy8VJKk9w0hXlcL/3Rs3/AM1/wFZobsSyvK6dYYXscviarmt8C/zFaobsTq2Ev+lx/wDO8rtz9+p8wAWMjwAAAAAAAAAAAAAZAHGoc5n6Nuqw9G3uifM0PWlx8wZ5G6sRlj7hmNKmAAPp5AAABkYgAlfQ1pUrsH1CWu5NGsscyP6LpanZuNPzLxfWWms9yobtbpNxt1UlTSTlzJNRsy//ANdkoNDp6DedGWka9YJueemj6xb5rL6ejmt82/aXqt2vv1lSxDheO4J20PC/+SVobk6LgfyLldI7preBMb4exlQens9YvpoLmm0k3mmyu8vEvaXZNkXMcmqqOakerJm5KWSORsjdTFzAANAyAAAAAABgoMZ0xJEh58+bLlSkXM7zWVVRe0zbpljjdI7S086jLpjzmraR8cWfBFlaqr5izat1b1akVtqe35U6zfmNG0macrTZ0m0OFvR3Ou3fWWX5iU3WXrt8PaYrrerzc8QXObXXWqnVtXOjtO8dbR9y/RD6IF/sOEZJHJNV7N8CIrLkicEXM+2LsQ3PFV/n3a6TvS1E1uiGyqL7FVfYsCfuTho9ezUn9KrxIyV1RLy0cpl2pUpuOPVZvw948vQhofaU8jEeLaXnhleloJq8XC01fwr5uqT5s5TbxRiKOOP2Gk+ir/8ADHb6NzndrKAAcwJ0AAAAAA83FVyl2fDVzurtlWlpXm+JUbL8WUom7NMnReMdcYt7S1HKfvi23R9C1JMyzrpUKmriyJtv8WSH2lddHFmbEGOLTaMuZaiqSD9yEczfDCJ17BlP7Nbn1L/i/hCt3N/aToxpcXR3b/knAdjt8VyxlUMrOvbZczfEzHt8IXsrlXhUKcvrJVqJ3yL3qWCFuhqNIB5X8/mw7Sq21/WHZfJD+Yrx9JMnKpuEKrSBT0Kts0VCit331u37GUhv2Hb8OQ9lbYmr4FSuDtU7jEAEwaYAAAAABnHvHJwnTzQJT0baHr5imXIuFYrWu1vtLOnJtTYdhfb3m1L9ZgqaqGkZ2kzskM0UT5VyYhGMuVMmzIJLVmZo6oQgSFhHQ9ja/qk1rcttpm2vTVzei1w7KbzeUspgnR9hfCEpfku3I9Su9VzlV5reLh8OU2nXEoVyx0iKrKRnqpMQWbvkUhHD3J5stNle+XmrrI8SU0tZS+ZszfhN9s+jDAVq1egw3RTWXiqc05vjbKbiOYp9TiS41PXKvpsSUdFAz4TzZNgsMlcsqx2qWvZoU/lPr8kWj/yi3/8AKp/Kd7ZGyRjq6odzcps9jGdBrLZX3rPbW+ulT+U6dVhLCtSrQn4ctDq29ro0/lPb8JxlPUdwqWdL1+557GN3NpoV40PaP7jm/wBR+qP1qSe6fDtL8Jo175OlBMzTLLiGfIb2SquTB186Zfwk7AlKbE1yp9kk++5rSUEDuaFT77oMx1btbU1LTXFF6Gpp65vK2VjQbvh+9WWe0q62uso3X2TpDJ++Be7KY1EqTUSmlTUlzZTbyTVV18rFhpMeyt4Z48/oaclnYvS4/P8AaEO0Ywh9JdO/aMMCXfM1Rh6kkTW46TNJbN4Nn4TQb9yeLROZnst8qKRuFKmUs1PMuVvhYstJjK3Tdaq36mhJapm9O5WtfEG+ole9aB8cUUWaklUVySHR6vULBvK2o0m84PxRZ4xW54fuFNDrNIbL9/QWCC5UtR7uVF9TTkppY+bTyrVX1lsrpVZb6qbTVUpsyTZTsrrH6GUnLAen6pkIlHi+k9ahDZ9cp4LCZ9bLux+tcpALS5i7yxGpvYp4rrbS18emduZ9gqJIHZsL1YXxTh7E1PCbZLrTVezmaUszU6d5G2l8p7XMUFpKippp6zqea8mara0dGirQj2YwNxotLOkGkpkppeJ6rIvMsZio7L4mWLFHrMAors6eTbzJiK88PG0uQOnd2ims3SzpCmR58U1q9yKr+6B0p2kjHM79Lim6t/xDGozAE/xSoZHXmPuaXYaDKuZsyr1mNdv2OMJWJWa54ht8p1/VI+d/KmZimlfiG/V/NWXivqOzNqHaH7YnUoqOtrp8JFLSz6ma3QkuXFox+yBI0+A6di6ppdjDJd5HdDSwuLeULb5EHk4atT1U3dWpq9hO9BF2m+1oEMYxx1ijFU3XeLrOmyc2tJK7EpO6q8xsGF9DOOLy6NNtq2unba9LXP6Pm7m9+wl/BugjC9pik69zZt6qV59UfmpEI91dpvtbwkgk9jsjeDJXJ6qYNFXVc9kK/YMwViLFdTGTZ7Y85YNtz22ZSd522fs6SyOi7RFZcJejr7g0u53def0rJ81KbsK3F228OUkWhpKaipUpaORJkU6LlSVKRVRO6qn16SoXjGFRWIsUHAz8klS21kXE7dQAClquZKAAHkAAABhl2tneHER5p4xqmE8IzZFLN/1pckeRIhBudE3Xfw7q9puySdsoH19S2Fnea88zYWK5SB9P+Kv6TY9mpSzVmUNuX1anZd18u+/ibX4YKbxyUsMRerrsV1EnYk/1aljGHE3O7fZDVDxRIPs1vqrzeKe30kpp1TVTYS5SrxM0S7uC7FTYYwxQ2SlystLKyu68bttM3ibMdNxNVstdsbSRc3Jl6EHQxunnWRx63sGrNEcJrWlO/rhvAV2uqzMs6EhpUj/NfZX8WbwnLqGB1TOyJvNVLBJI1kaud3FStKl4hfNIF6uKtmlzap4S49hdlfhWBqvsMnjmaMTjphA/QsUTYo2sTuQpMjtTlU+YEQfTwAAAZaztUlLPrKmXT08l5s6YyqiIuZmZuiEIHV1HuWG/XCwzXqbTNhTVTrlhUwX51IdluDX712vpDtWnY9J5k46P9HOGcFU0u/aRbhb5Vc23IoaiauWR2mTjbs5csO0bJe9PGCaForRLcLo0ObNKlZF8z5fwlW6ypqaye0+qqJs+a+87vFm+2LHVWO1xFfqMPRVr+0q3q/y5IbrK50SZRpkT9Xco6ozR9RwxTLDh9PVM/wCxVU6X/aNvf/p61eeb/MQX9ZzqgZWYatjE90h8/UKh3xE8SeUhcofpsL0Mf8qe6/izHfpOUfJi0IVWFWhDijKrv4RQrzs+8bJ8fhi1v/a/kNuFQ34i1Vn0+4Lq3y11Pc7f9Lylmp8LZvhN4sOOMIXzL8mYit8133ZcZuR/ufKxR1ohWaHtiRlTgmgl92qsNiO7St6tz9A+q3C272jLnKSYax7ivDsyHyRfKuVKh0SWbPL8ja1JUwtyh6hMkrElllz4cVRRNkfyNsx8MVKrW4Fq4Vzgcj0JCK7xSdexYVso5jVsI6RMH4mypbLxI9Yb+7VPzU3ytveHMbS0FhulSqbfPSu0zMVCRjmjk3a7MAA0DMAAABmZVyq2yAZGPc3pPmR59ysNjuH9vsttq+1OpUZvNlNZuGirR7Xa/SYbpJTNxSXeV+FjdjnMSMV1rIuiVU9TC+mjdzahGE7QVo9fdprlK7lZ/MrHVbQFgaP627r/AMSn8hLHhButxNcm/uqY/YIPlIpl6A8Bq2093mf8Uq/kO3J0G6PZe9Q3Cd36z+VVJLB5diW5u/dUNooPlNKtuizR/QZfRYZpnZeKod5v4mNut9vobbK9FbqOmpE91PKVF+FTsZjj7TRludXP72RV9TLHTxx8mgAEfnmZgADyAAAAAAB0AHmYqxDasNWibc7xVS5FOmyvtd26qLxMbdNTSVEiRRNzVTG5zY26nGOK79bMM2OovF0m+jp5S7Kw3nfhVV4mYpzpBxRX4uxHU3qtfKzxyypUG2ZSQ3UX6v2x1xPR0q4/uOObz6abmkUMmLLS0kG1qi9Zus7cTHvaCNHE3FtzW53NIy7LSx29fN6d4cEPo97fZxHWrNa4LDSOqaleP/mxW6qd9ZIjGcje+THgJqOl/plc5Xzs9YpboOu6m603xbsPoze8nHp5jGTLSVKWVKlpLlIqqiKuVVVd1VXqmXQxza83V9yqnTP5d3kT1JTpAxGGXCV25V+J1qK6hwpTPrhS/wBaqtTcbrsL4V1t4ydMV3qjw5h6tvVey+hpZbNlzbTvwIvaZsqlIr/daq93qru1c2eoqprTXbtNH9xaMEWpXzLVv5Jy+pH3afQzsmnkAA6iVwAAAAAAAAAAAAAAAAAAAAAAAA+qRaEeZoqb5hDStjPDSpKprq9VSp/dqv51Ps17S+GJoPN9RzDxHieninZolYioZGSPYubVLR4N0+YeuTLIv9PNtE9ub0qZpsj4dtfKxK1puVtutKtZaq6mrKfryXVl+HdKC69UeY9Ox3q7WasWqtVyqaGcu68l2RvhKdcME0lRxQLoX8EnBdXx9e5fHunPOViwpp/xJQxSVfaWmu8qHNF/0M3zLst4lJZwvpmwPe1WXNuDWqobgrEyr51zL5spSa/CdxpeTNSeRLxXGCXyJDBhS1EiqlLPpZ8qfJbdeU6ujeJTMrckMkezmm61zXAAGA9AAAAAAAAAAAAAAAAZgGZUVpjsqoi5mdmyqveYyMjc/pPLlDHPMaBjDS5gvDkHT5RW51a/qaPK+12n3V8zEH4801YnxFB6OhmLZre/NGVTPHO8O0+99i5S023CdbWORzk0N8zQnuEEXmpN2kjSthzB6TaVXW5XZVyrSSW2Ubttw93eKyY4xde8XXVq68VrTo86ypSw1S5S9VIcP74+08mz2u53y4JQ2ykqKyrmtsS5aszN2iwmizQhTW70N0xgsuqqV50oFjrlJHttxN2V5u8XyKC2Ycg1uXN/5UiXPnrnZJshomh3RJV4rmy7teJc2kssG1rwvVdlPcvvb7i0FuoaW10EmgoqeXTUlOipKlJDUqqdiWqpLVJaqqquVVVcqqpzvMc6vd/nur99mJ3E1SUTKdv/AJHHSIw1Bm2cqkK6fdKiWqTOwth+fmuExclZUo39nXiRY9duJuHvbuvaLTJcpkjj9TLU1LIGZqaTyjMeriC7Rw/ap/pLZb3bPNVtmom9DN2lXaVfFEhv2wOWbW0Tht47jQ0cVFC2GPkhUJ5nSv1qYRABsGEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGWtjEAHr2W+3ezz/T2y51lG/WkzWT9xIFi0544tupamqprmi8NXIX8S5WIrYQ+o1qihp6j3rEUzRzyM5KWNsvKMo3yreMNzJceJ6SesfhdfzG3WvTfo/rNXpa6qo3bhqKWOVfEmYqIwWMSCqMIWybk3L6G2y5zt5qXgocfYIrf7Nim1M3uefBG+PKezS3W1VS5qW50M+HYqUb8xQlc+riMoNMXrfYREuA6V3RKqfk223eTvaX/XbXMvzi9ZdoyyN1W8pQeTcbhJbNJrKmXH6JrQ/id2XinEsuGWXf7nLh2ap4fxNN+AE7pvwZG3nxYXqydlvKMnZbylGf6Z4uh/tNe/+dm/zGL4txVN/SYju8z66ybH+J5/sD/3fg+/rKfKXoaDQXMyssOsx06q62yjh/WrnQyIdabUov4mKLz7rc6hv6xX1c6Pvea0f4nTzTWjmZmaP0meLAMfxzfg8Ou7vhYXWuWkfAtv1+sYptuZfZJmelb4MxqF6094Lo1ZaBLhcn4dUpZSeZmzfCVjo7bca2bCXR0NVUu26suUzZvuNps+ifH9z1NIw3VSkbiqMsmHxxgbzMKWel4pn/dTF+o1T+hpvOIOUNfajWlls9DQLwvOZp8z8q/CRpijGuKsSRj8s3qsqU/ws+VPIupf2Ek2Hk8YgqGVr1eKGhTiWQrTn/KvxEkYa0I4ItOV6umqbrNhtZqt8qfcuWHmzHt10sNr9yiZ+W/5DaesqOvZCr9gsF6v1StLaLbU1s5m6JKRbV9cegmLBHJ+rJ0UqsWVq0ib3qlKyvNj2Wbdh4cxYO30NDb6VaW30cikkpuypKKiL4VOwxXrjjieXhpm6G+PebkFqY3d+55GFcM2TDFB6rY7dIopUd94Lmd+87bTHrL2QNpSlzVU1Q9XyuzUlGtbG3JoHRunnYjv9nw7b2r7zXyKOSu6zttO3VVd5m7pXHStpmr8RS51pw9Gbb7W2y7tFYT6he1Fdxeyvij7Cas+HKq5P5aW+JqVNayBPM3LTRphkUSVFgwlUq9W2ZKm4I2aErrKkeJu3w8POVrmzGeY0yY0WZo62jH2mMY626NZxr2jr9stcFtg7KFPXxKzU1L535uMAAb5rgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH0j07QWEM3EbZgbAuIMYVno7Nb2eQraplTM2ZSfW38Ic5YXAWhPDVgglXd1W910Nr51MshG7KcXi8pD3O/Udub/AJXb+BuQUMs/Irzg/AOKsVOvyPaJ82Tm1RqXhklQ8TcxMWFOTzRy8s/E94adM3vQUa5U7rO35VJ2lrLlIsqWiS5SLlREXKqr2VGz3TnlwxtVz8MHA38k3Baoo937qa9h7A+EMPpBbXYKGU+XV6WZL9K8ftfMx3qzDuHqyDLUWG1TYN16NG/KemCryXOrkk1rIuf1JBsMbW5I01mZo+wNMbM2FLR4ZCr+E67aMsAt/slb/szr+Y24GT9Zrk/dd9z57PD8qGoroxwDD/ZS3fH/ADGa6OMBpu4StX2ymb8TG1g+/rNd/wB133Hs8Xyoa5LwJgqX+jwpZfFRo34lPRpcPYepsvq9htcjL/hUqL+U9Iy1/QYn3Ork4XSOX1PrYYm9LTGSkuSvo5SLLTqquVfhABpOke/mZNKNAUZtnM271uE16/Y3whZIN8p4it8l13pSzc7+VMzG1DQz1DsomKpjkma3dXGw94d0hvEXKBwxSKyWa3VlyfhjMyyU/M37FIxxRpvxpeYPJpaqVaJDbOqkTU+r6Xjmby6ix0WDK+p3emhPM05bpDH07lmsTYnsGHKf098utNRrlzZHfbfuqu03lIYx1ygFhnpMIUEF4fXKtdrvKn83lIFraqprJ8Z1TPmT5r87O7xZo/XGJ1OLoLxbsHUdHk+Tjd+CInussmzdkPYv19ut+r3rbrXT6ye+88583hX3Q+iB43tOfsOOItjWtamlqZEa5znLmpiAD4eQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZKuYAzVYtHm6Sb9D+heZdoSL1ilJtPb4rnlUe7Nnw6zdVP2x+g2HQRonSRKp8UYoplec6wehpJsNlF9kx4fuh7N5icigYlxYsKrT0nV3r/ALE5Q23Umt58LfRUtvpEo6GllU1PK2UlSkyoq9lT77wjHMN05hNM+Z2p/Mn2N0gAcLNwrvNwqeGMc/pGodPEOg1++Y3wjZostxxFbZDrvIs1XfypmY0i8afcE0bMtDKuVyfhikpZSeZ2zfCTNNYK+p6IlNd9XFHzcSuCu115RlfMjltmG6SRDhapnvNb8pqV20349rV+aukmhXq01Oi/E2tibgwPXydao01ZLrC3luW3VWjuqx0blerLbVb5QulDSat701Si5fMxSm7YyxRdYRW4YhudSsfY9S+ry69R4Lzpkxoszs0Y+2JMwf0/Ynvpfsaj7z8rS5d00saPaDMszEkie3Vpkeb+FcvxGr3TlB4Qps3qVBc65/fkWUnmZmb4SrWtjlSXgwTbo13RXeprSXWZ3TsTzdOUZXvmW3YbpJXVjUT3fL9i5TU7rpwx7WrH0VxkUKtw01Oi/E2tiLwTEFit8GzIkNV9ZNJ1OPfvWLcR3jNC53y4Vax4ZtS8V+7XqPBiza+dh09EDj2koyNjNmpkaznOdzMQAfTyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ+wmrk4aPkvtwbE91kekt1E+WRLZdmonLtbXZXmj2myr1iLcJWepv+IaKz0S5p9XNhKT6NfS0fqhrj9hdzDdoo7BYqK029MtPSSlROs3WZu0zZm8RVcWXlaCm7OPreStspO2frXkh6GrWDGonJTyJtTNmS0lIuZ5rtlVF6zM26Q3pE08Wi156HC0pbnVQ2WqZuZZCN2V3n+Fe8cwt9nq7m/KJvqWCepjgbxKTHOmypMlps15cqUm082ayqq95mI8xZpmwTYs0qRWTLvVL+qoedPE7bPlzFZ8XY1xJiqoZ7vdJ9QmvMsnNllL3UXZU1t+ePOX+24Ggi4ql2pfAhJ7u520WxNOJOUJiOszSrLb6O2So9EWh6aZ5m2fhI3xBjLE1+do3a+V1UseB50YJ5YcxruaJx09JbaW10lJ7qNEIySqll6lDO0elomABumAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnjknWKFRfLniGbL1rRylkSIx6773wQb7ycscYusuELK1xvFTkVs0JEmG089uqq/m3VIy0NXi2YH0GPiO5suqoq5rpKVtua67CKvlburtEEY5xVdcW36bdrpNzO2zLlQ3JScKLDqwKHPZn3i6vll2iZt9ciabVtpaVGs6lPf0l6Sr5jaoaVPnRo7YrZpVDLfZ+to8bdqP2QI+jHn6ec4EI+6BeIIIqdiMibkiETJI+Rc3qYAAyGMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGS7xiADYr9iCsudotFpb5uitlPFJUpW5ouzMzzI9pmj5VU1+MTJoGLQ5w1rWpsNWoxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB//Z" width="32" height="32" style="border-radius:6px;object-fit:cover">
+    Dextopus
+  </div>
+  <div class="nav-mid">
+    <a href="#">Products</a>
+    <a href="#">Use Cases</a>
+    <a href="https://dextopus.gitbook.io/dextopus-docs">Docs</a>
+    <a href="#">Pricing</a>
+  </div>
+  <div class="nav-right">
+    <a href="https://calendly.com/dextopus/30min" class="btn btn-outline">Talk to Us</a>
+    <a href="https://dextopus.gitbook.io/dextopus-docs" class="btn btn-gold">Start Building</a>
+  </div>
+  <div class="ham" id="ham" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<div class="mobile-menu" id="mobile-menu">
+  <a href="#">Products</a>
+  <a href="#">Use Cases</a>
+  <a href="https://dextopus.gitbook.io/dextopus-docs">Docs</a>
+  <a href="#">Pricing</a>
+  <div class="mob-ctas">
+    <a href="https://calendly.com/dextopus/30min" class="btn btn-outline" style="text-align:center;justify-content:center">Talk to Us</a>
+    <a href="https://dextopus.gitbook.io/dextopus-docs" class="btn btn-gold" style="text-align:center;justify-content:center">Start Building</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <h1>Cross-chain deposit and withdrawal <span class="g">for your users.</span></h1>
+    <p class="hero-sub">Your product stays the same. Your users can now fund from 70+ chains and withdraw to wherever they need. You collect a fee on every transaction.</p>
+    <div class="hero-actions">
+      <a href="https://dextopus.gitbook.io/dextopus-docs" class="btn btn-gold btn-lg">Start Building</a>
+      <a href="https://calendly.com/dextopus/30min" class="btn btn-outline btn-lg">Talk to Us</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <canvas id="globe-canvas"></canvas>
+    <div class="tx-overlay" id="tx-widget">
+      <div class="tx-tag">
+        <div class="pdot"></div>
+        <span id="tx-label">Live settlement</span>
+        <span class="tx-type-badge tx-type-deposit" id="tx-type">Deposit</span>
+      </div>
+      <div class="tx-blk">
+        <div class="tx-lbl" id="send-label">User sends</div>
+        <div class="tx-amt-row">
+          <div id="send-tok-logo" class="tx-logo" style="background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731')"></div>
+          <div class="tx-amt" id="tx-send-amt">1,000.00 USDT</div>
+        </div>
+        <div class="tx-ch">
+          <div id="send-chain-logo" class="tx-logo-sm" style="background-image:url('https://assets.relay.link/icons/728126428/light.png')"></div>
+          <span id="tx-send-chain" style="font-size:10px;color:var(--dim)">Tron</span>
+        </div>
+      </div>
+      <div class="tx-mid">
+        <div class="tx-line"></div>
+        <div class="tx-arr" id="tx-arr">↓</div>
+        <div class="tx-line"></div>
+      </div>
+      <div class="tx-blk">
+        <div class="tx-lbl" id="recv-label">Business receives</div>
+        <div class="tx-amt-row">
+          <div id="recv-tok-logo" class="tx-logo" style="background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694')"></div>
+          <div class="tx-amt" id="tx-recv-amt">999.41 USDC</div>
+        </div>
+        <div class="tx-ch">
+          <div id="recv-chain-logo" class="tx-logo-sm" style="background-image:url('https://assets.relay.link/icons/8453/light.png')"></div>
+          <span id="tx-recv-chain" style="font-size:10px;color:var(--dim)">Base</span>
+        </div>
+      </div>
+      <div class="tx-foot">
+        <div class="tx-status"><div class="pdot"></div>Settled</div>
+        <div class="tx-time" id="tx-time-val">3.8s</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE TX WIDGET (shows below hero on mobile) -->
+<div class="mobile-tx-wrap" id="mobile-tx">
+  <div style="background:rgba(12,13,23,0.98);border-top:1px solid var(--bdr2);border-bottom:1px solid var(--bdr2);padding:20px">
+    <div class="tx-tag" style="margin-bottom:14px">
+      <div class="pdot"></div>
+      <span>Live settlement</span>
+      <span class="tx-type-badge tx-type-deposit" id="mob-tx-type">Deposit</span>
+    </div>
+    <div class="tx-blk" style="margin-bottom:6px">
+      <div class="tx-lbl" id="mob-send-label">User sends</div>
+      <div class="tx-amt-row">
+        <div id="mob-send-tok-logo" class="tx-logo" style="background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731')"></div>
+        <div class="tx-amt" id="mob-tx-send-amt">1,000.00 USDT</div>
+      </div>
+      <div class="tx-ch">
+        <div id="mob-send-chain-logo" class="tx-logo-sm" style="background-image:url('https://assets.relay.link/icons/728126428/light.png')"></div>
+        <span id="mob-tx-send-chain" style="font-size:10px;color:var(--dim)">Tron</span>
+      </div>
+    </div>
+    <div class="tx-mid" style="margin-bottom:2px">
+      <div class="tx-line"></div>
+      <div class="tx-arr" id="mob-tx-arr">↓</div>
+      <div class="tx-line"></div>
+    </div>
+    <div class="tx-blk">
+      <div class="tx-lbl" id="mob-recv-label">Business receives</div>
+      <div class="tx-amt-row">
+        <div id="mob-recv-tok-logo" class="tx-logo" style="background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694')"></div>
+        <div class="tx-amt" id="mob-tx-recv-amt">999.41 USDC</div>
+      </div>
+      <div class="tx-ch">
+        <div id="mob-recv-chain-logo" class="tx-logo-sm" style="background-image:url('https://assets.relay.link/icons/8453/light.png')"></div>
+        <span id="mob-tx-recv-chain" style="font-size:10px;color:var(--dim)">Base</span>
+      </div>
+    </div>
+    <div class="tx-foot" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bdr2)">
+      <div class="tx-status"><div class="pdot"></div>Settled</div>
+      <div class="tx-time" id="mob-tx-time-val">3.8s</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-wrap">
+  <div class="stats-inner">
+    <div class="stat reveal"><div class="stat-n">$10B+</div><div class="stat-l">Aggregated liquidity queried on every transaction</div></div>
+    <div class="stat reveal" style="transition-delay:.1s"><div class="stat-n">70+</div><div class="stat-l">Chains your users can deposit from and withdraw to</div></div>
+    <div class="stat reveal" style="transition-delay:.2s"><div class="stat-n">150+</div><div class="stat-l">Tokens supported across all chains</div></div>
+    <div class="stat reveal" style="transition-delay:.3s"><div class="stat-n">&lt;5s</div><div class="stat-l">Typical settlement time on standard transactions</div></div>
+  </div>
+</div>
+
+<!-- PRODUCTS -->
+<section class="sec">
+  
+  <h2 class="reveal"><span class="g">Two products.</span> <em>One integration.</em></h2>
+  <p class="sec-sub reveal">Deposit brings money into your product from your users. Withdrawal sends it out to wherever they need it. Both run on the same two endpoints. Your infrastructure stays exactly as it is.</p>
+  <div class="prod-grid">
+    <div class="prod-card reveal" style="transition-delay:.1s">
+      <div class="prod-seq">01 · Deposit</div>
+      <span class="prod-icon">↓</span>
+      <h3 style="color:var(--gold)">Your users fund their accounts from anywhere</h3>
+      <p>A user sends Bitcoin, USDT on Tron, WBTC on Ethereum, SOL on Solana, USDC on Celo, GUN on Gunz, or any supported token. Dextopus detects the transaction, converts it, and delivers your chosen stablecoin to your recipient address. Your user never touches a bridge. You receive exactly what you configured.</p>
+      <p style="font-size:13px;color:var(--dim);margin-top:12px;line-height:1.65">Two address types available. <strong style="color:var(--text)">Static addresses</strong> are permanent, one per user per network, reusable forever. <strong style="color:var(--text)">Flexible addresses</strong> are generated per session, single use.</p>
+    </div>
+    <div class="prod-card reveal" style="transition-delay:.2s">
+      <div class="prod-seq">02 · Withdrawal</div>
+      <span class="prod-icon">↗</span>
+      <h3 style="color:var(--gold)">Your users get their funds out, on the chain they use</h3>
+      <p>A user wants to withdraw to Tron, Bitcoin, USDC on Katana, RON on Ronin, ETH on zkSync, or a chain your product has never integrated. You generate an address, send the funds to it, Dextopus converts and delivers to the user's external wallet. Your product now reaches destinations it never could before.</p>
+    </div>
+  </div>
+</section>
+
+<!-- DIFFERENTIATORS -->
+<div class="diff-bg">
+  <section class="sec">
+    <div class="diff-header">
+      <div>
+        
+        <h2 class="reveal"><span class="g">Settlement infrastructure.</span> <em>With an operator experience nobody built before.</em></h2>
+      </div>
+      <p class="sec-sub reveal">Every business that integrates Dextopus gets permanent user addresses, a full operator dashboard, real-time webhook notifications, and on-chain fee collection. Out of the box.</p>
+    </div>
+    <div class="diff-grid">
+      <div class="diff-card reveal" style="transition-delay:.05s">
+        <span class="diff-new">First</span>
+        <span class="diff-icon">⬛</span>
+        <h4 style="color:var(--gold)">Static deposit addresses</h4>
+        <p>One permanent address per user per network. Generate once, active forever. One EVM address covers every EVM chain. One Tron address. One Solana address. One Bitcoin address. Your users save it like a bank account number.</p>
+      </div>
+      <div class="diff-card reveal" style="transition-delay:.1s">
+        <span class="diff-new">First</span>
+        <span class="diff-icon">▦</span>
+        <h4 style="color:var(--gold)">Operator dashboard</h4>
+        <p>See every address you generated, every transaction, every deposit that landed or failed. Full visibility into your integration, no internal tooling required.</p>
+      </div>
+      <div class="diff-card reveal" style="transition-delay:.15s">
+        <span class="diff-icon">⚡</span>
+        <h4 style="color:var(--gold)">Webhook notifications</h4>
+        <p>Real-time HTTP POST when deposits are created, completed, or fail. Cryptographically signed. Automatic retries with exponential backoff. Your backend knows the moment money moves.</p>
+      </div>
+      <div class="diff-card reveal" style="transition-delay:.2s">
+        <span class="diff-icon">◈</span>
+        <h4 style="color:var(--gold)">On-chain fee collection</h4>
+        <p>Set your fee in basis points. Add your wallet once. Every deposit and withdrawal pays you directly on-chain, automatically. No invoicing. No settlement delays.</p>
+      </div>
+      <div class="diff-card reveal" style="transition-delay:.25s">
+        <span class="diff-icon">↺</span>
+        <h4 style="color:var(--gold)">Automatic refunds</h4>
+        <p>Send a supported token to the wrong chain? It converts. Send a chain's native token we don't support? It refunds automatically to your specified refund address. Your users are protected.</p>
+      </div>
+      <div class="diff-card reveal" style="transition-delay:.3s">
+        <span class="diff-icon">∞</span>
+        <h4 style="color:var(--gold)">Non-custodial throughout</h4>
+        <p>Dextopus never holds funds. Every transaction executes through audited smart contracts, on-chain and traceable end to end. No new custody relationship introduced.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- COVERAGE -->
+<section class="sec">
+  
+  <h2 class="reveal"><span class="g">150+ tokens across 70+ chains.</span> <em>Your users send from what they hold.</em></h2>
+  <p class="sec-sub reveal">From Bitcoin and USDT on Tron to DEGEN on Degen chain, RON on Ronin, GUN on Gunz, and xDAI on Gnosis. The chains winning in emerging markets are all here.</p>
+
+  <div class="tok-wrap reveal" style="transition-delay:.1s;margin-top:44px">
+    <div class="tok-grid">
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/1/light.png')"></div><div class="tok-chain">Ethereum</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="ETH" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/1/light.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDT" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="WETH" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39810/large/weth.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="WBTC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/7598/large/wrapped_bitcoin_wbtc.png?1696507857');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="DAI" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/9956/large/Badge_Dai.png?1696509996');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDe" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.coingecko.com/coins/images/33613/standard/usde.png?1733810059');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="ANIME" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.coingecko.com/coins/images/53575/standard/anime.jpg');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="APE" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/currencies/ape.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><span style="font-size:9px;font-family:monospace;color:var(--dim);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);padding:2px 6px;border-radius:4px">+5</span></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/8453/light.png')"></div><div class="tok-chain">Base</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="ETH" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/1/light.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDT" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="WETH" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39810/large/weth.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="cbBTC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/66849/large/btc.png?1750793694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="WBTC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/7598/large/wrapped_bitcoin_wbtc.png?1696507857');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="SOL" style="width:22px;height:22px;border-radius:50%;background-image:url('https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="DEGEN" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/34515/large/android-chrome-512x512.png?1706198225');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/792703809/light.png')"></div><div class="tok-chain">Solana</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="SOL" style="width:22px;height:22px;border-radius:50%;background-image:url('https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDT" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="PYUSD" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/31077/large/672f07ac4627e35ad3ce0901_paypal_usd_logo_200x200_color.png?1713535553');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="PENGU" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/38156/large/penguin.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="JUP" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/34105/large/jup_round.png?1703664256');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/728126428/light.png')"></div><div class="tok-chain">Tron</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="USDT" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/8253038/light.png')"></div><div class="tok-chain">Bitcoin</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="BTC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/currencies/btc.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/56/light.png')"></div><div class="tok-chain">BNB Chain</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="BNB" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/currencies/bnb.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDT" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="WBTC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/7598/large/wrapped_bitcoin_wbtc.png?1696507857');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="SOMI" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.coingecko.com/coins/images/68061/large/somniacg.png?1754641117');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/747474/light.png')"></div><div class="tok-chain">Katana</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="ETH" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/1/light.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDT" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="WBTC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/7598/large/wrapped_bitcoin_wbtc.png?1696507857');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/999/light.png')"></div><div class="tok-chain">HyperEVM</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="HYPE" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.coingecko.com/coins/images/50882/standard/hyperliquid.jpg?1729431300');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDe" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.coingecko.com/coins/images/33613/standard/usde.png?1733810059');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USDH" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/69484/large/usdh.png?1758728903');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="USD₮0" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/2020/light.png')"></div><div class="tok-chain">Ronin</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="RON" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/currencies/ron.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/100/light.png')"></div><div class="tok-chain">Gnosis</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="xDAI" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/currencies/xdai.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/747/light.png')"></div><div class="tok-chain">Flow EVM</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="FLOW" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.relay.link/icons/currencies/flow.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/98866/light.png')"></div><div class="tok-chain">Plume</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="WETH" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/39810/large/weth.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="PLUME" style="width:22px;height:22px;border-radius:50%;background-image:url('https://assets.coingecko.com/coins/images/53623/standard/plume-token.png?1736896935');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div><div title="pUSD" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/42220/light.png')"></div><div class="tok-chain">Celo</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="USDC" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/666666666/light.png')"></div><div class="tok-chain">Degen</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="DEGEN" style="width:22px;height:22px;border-radius:50%;background-image:url('https://coin-images.coingecko.com/coins/images/34515/large/android-chrome-512x512.png?1706198225');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card">
+        <div class="tok-chain-hd"><div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/43419/light.png')"></div><div class="tok-chain">Gunz</div></div>
+        <div class="tok-list" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><div title="GUN" style="width:22px;height:22px;border-radius:50%;background-image:url('https://storage.gunbygunz.com/gunz_symbol_320x320.png');background-size:cover;background-position:center;background-color:var(--bg2);flex-shrink:0"></div></div>
+      </div>
+      <div class="tok-card" style="background:rgba(255,184,0,.04);border-color:rgba(255,184,0,.12)">
+        <div class="tok-chain-hd" style="margin-bottom:12px"><div class="tok-chain" style="color:var(--dim)">+55 more chains</div></div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/42161/light.png')" title="Arbitrum"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/10/light.png')" title="Optimism"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/137/light.png')" title="Polygon"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/43114/light.png')" title="Avalanche"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/143/light.png')" title="Monad"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/80094/light.png')" title="Berachain"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/130/light.png')" title="Unichain"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/1337/light.png')" title="Hyperliquid"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/59144/light.png')" title="Linea"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/5000/light.png')" title="Mantle"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/534352/light.png')" title="Scroll"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/324/light.png')" title="zkSync"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/57073/light.png')" title="Ink"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/81457/light.png')" title="Blast"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/7777777/light.png')" title="Zora"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/33139/light.png')" title="ApeChain"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/146/light.png')" title="Sonic"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/9745/light.png')" title="Plasma"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/4326/light.png')" title="MegaETH"></div>
+          <div class="tok-chain-logo" style="background-image:url('https://assets.relay.link/icons/1514/light.png')" title="Story"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVENUE -->
+<div style="background:var(--bg2);border-top:1px solid var(--bdr2);border-bottom:1px solid var(--bdr2)">
+  <section class="sec">
+    <div class="rev-grid">
+      <div class="reveal">
+        
+        <h2><span class="g">Every settlement is</span> <em>a revenue event.</em></h2>
+        <p style="font-size:15px;color:var(--dim);line-height:1.78;margin-top:14px;margin-bottom:22px">Pass your wallet address and a fee in basis points on every API call. That fee gets embedded into the transaction and collected on-chain automatically when it executes. No invoicing. No revenue sharing beyond the protocol fee.</p>
+        <ul class="feat-list">
+          <li>Both deposit and withdrawal carry your partner fee.</li>
+          <li>Set any rate: vary by transaction size, customer tier, or corridor.</li>
+          <li>WaaS businesses stack fees at two layers: yours, plus each downstream client's fee, both collected in the same transaction.</li>
+        </ul>
+      </div>
+      <div class="reveal" style="transition-delay:.1s">
+        <div class="fee-block">
+          <div class="fee-ey">Protocol fee structure</div>
+          <div class="fee-row"><span class="fee-lbl">All transactions</span><span class="fee-val">0.15%</span></div>
+          <div class="fee-row"><span class="fee-lbl">Monthly subscription</span><span class="fee-val" style="color:var(--dim)">None</span></div>
+          <div class="fee-row"><span class="fee-lbl">Your partner fee</span><span class="fee-val">+X BPS (your rate)</span></div>
+        </div>
+        <div class="rev-ex">
+          <div class="rev-ex-hd">$1,000 USDT deposit → USDC</div>
+          <div class="rev-ex-row"><span>Dextopus protocol (0.15%)</span><span>$1.50</span></div>
+          <div class="rev-ex-row"><span>Your fee (0.30%)</span><span>$3.00</span></div>
+          <div class="rev-ex-row tot"><span>Total cost to user</span><span style="color:var(--gold)">$4.50 · 0.45%</span></div>
+          <div style="margin-top:10px;padding:9px 11px;background:var(--surf);border-radius:6px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:var(--dim)">At $10M monthly volume</span>
+            <span style="font-size:12px;font-family:var(--mono);color:var(--green);font-weight:600">$30,000/mo</span>
+          </div>
+        </div>
+        <div class="rev-big-block">
+          <div class="rev-big">$325M+</div>
+          <p style="font-size:13px;color:var(--dim);line-height:1.65">earned by the leading crypto wallet from one fee parameter on every cross-chain transaction. That model is now available to your business through one Dextopus integration.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- USE CASES -->
+<div class="uc-bg">
+  <section class="sec">
+    
+    <h2 class="reveal"><span class="g">Built for every business</span> <em>that moves money.</em></h2>
+    <p class="sec-sub reveal">Your business is deployed somewhere. Your customers are on 70+ chains. Dextopus connects both directions.</p>
+    <div class="uc-grid">
+      <div class="uc-card reveal" style="transition-delay:.05s">
+        <h4>Neobanks and Fintechs</h4>
+        <p>Give each customer a permanent deposit address. Accept USDC on Celo, USDT on Tron, BTC, SOL and more. Send withdrawals to Katana, Ronin, Gnosis, wherever they need.</p>
+        <a href="https://dextopus.gitbook.io/dextopus-docs/use-cases/neobanks-and-fintechs">See how →</a>
+      </div>
+      <div class="uc-card reveal" style="transition-delay:.1s">
+        <h4>Wallet-as-a-Service</h4>
+        <p>Integrate once. Every product built on your infrastructure inherits full chain coverage and static addresses automatically.</p>
+        <a href="https://dextopus.gitbook.io/dextopus-docs/use-cases/wallet-as-a-service-waas">See how →</a>
+      </div>
+      <div class="uc-card reveal" style="transition-delay:.15s">
+        <h4>Stablecoin Payment Rails</h4>
+        <p>USDT on Tron. USDC on Base. xDAI on Gnosis. USDC on Celo. Every stablecoin corridor your clients need, from one integration.</p>
+        <a href="https://dextopus.gitbook.io/dextopus-docs/use-cases/stablecoin-payment-rails">See how →</a>
+      </div>
+      <div class="uc-card reveal" style="transition-delay:.2s">
+        <h4>Payment Processors</h4>
+        <p>A sender in Lagos with USDT. A recipient in Singapore wanting USDC on Base. A supplier in Dubai on BNB Chain. One API covers every corridor.</p>
+        <a href="https://dextopus.gitbook.io/dextopus-docs/use-cases/payment-processors">See how →</a>
+      </div>
+      <div class="uc-card reveal" style="transition-delay:.25s">
+        <h4>DeFi Protocols and dApps</h4>
+        <p>Users from Monad, Berachain, Unichain, or any supported chain enter your protocol without manual bridging. They exit to any chain. Stay deployed on one.</p>
+        <a href="https://dextopus.gitbook.io/dextopus-docs/use-cases/defi-protocols-and-dapps">See how →</a>
+      </div>
+      <div class="uc-card reveal" style="transition-delay:.3s">
+        <h4>Privacy Protocols</h4>
+        <p>Dextopus handles cross-chain routing before and after the privacy layer. Users arrive on the right chain with the right token. The privacy mechanism stays untouched.</p>
+        <a href="https://dextopus.gitbook.io/dextopus-docs/use-cases/privacy-protocols">See how →</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- INTEGRATION -->
+<section class="sec">
+  <div class="int-grid">
+    <div class="reveal">
+      
+      <h2><span class="g">Live in hours,</span> <em>not months.</em></h2>
+      <p style="font-size:15px;color:var(--dim);line-height:1.78;margin-top:14px;margin-bottom:28px">The Swagger environment runs against production. Make real API calls and see real responses before writing a single line of integration code.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="https://dextopus.gitbook.io/dextopus-docs/api-reference-overview" class="btn btn-gold">Read the Docs</a>
+        <a href="https://swap-api.dextopus.com/api-docs/" class="btn btn-outline">Test in Swagger</a>
+      </div>
+    </div>
+    <div class="reveal" style="transition-delay:.1s">
+      <div class="step"><div class="step-n">01</div><div class="step-body"><h4>Read the API reference</h4><p>Two endpoint patterns. Full documentation immediately available.</p><span class="step-badge">Under an hour</span></div></div>
+      <div class="step"><div class="step-n">02</div><div class="step-body"><h4>Test in Swagger</h4><p>Real API calls. Real responses. Before your team writes any code.</p><span class="step-badge">Same day</span></div></div>
+      <div class="step"><div class="step-n">03</div><div class="step-body"><h4>Build the integration</h4><p>Connect your backend. Set your partner fee. Run end-to-end with real transactions.</p><span class="step-badge">Hours to days</span></div></div>
+      <div class="step"><div class="step-n">✓</div><div class="step-body"><h4>Go live</h4><p>Customers deposit from any chain. They withdraw to any chain. You earn on every one.</p><span class="step-badge">Production</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-wrap">
+  <div class="cta-inner reveal">
+    <h2>Ready to reach <span class="g">every chain,</span> in both directions?</h2>
+    
+    <div class="cta-btns">
+      <a href="https://dextopus.gitbook.io/dextopus-docs/api-reference-overview" class="btn btn-gold btn-lg">Start Building</a>
+      <a href="https://calendly.com/dextopus/30min" class="btn btn-outline btn-lg">Talk to Us</a>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-inner">
+    <div class="foot-logo">
+      <svg width="22" height="22" viewBox="0 0 100 100" fill="none">
+        <ellipse cx="52" cy="38" rx="28" ry="26" fill="#FFB800"/>
+        <circle cx="62" cy="32" r="4" fill="#000" opacity=".5"/>
+        <path d="M28 55 C20 65 18 80 22 90" stroke="#FFB800" stroke-width="8" stroke-linecap="round"/>
+        <path d="M36 60 C30 72 28 84 32 94" stroke="#FFB800" stroke-width="7" stroke-linecap="round"/>
+        <path d="M46 63 C44 76 44 88 48 96" stroke="#FFB800" stroke-width="7" stroke-linecap="round"/>
+        <path d="M56 62 C58 75 60 87 58 96" stroke="#FFB800" stroke-width="7" stroke-linecap="round"/>
+        <path d="M66 58 C72 70 74 82 70 92" stroke="#FFB800" stroke-width="7" stroke-linecap="round"/>
+        <path d="M74 52 C82 62 86 76 82 88" stroke="#FFB800" stroke-width="6" stroke-linecap="round"/>
+      </svg>
+      Dextopus
+    </div>
+    <div class="foot-links">
+      <a href="https://dextopus.gitbook.io/dextopus-docs">Docs</a>
+      <a href="https://dextopus.gitbook.io/dextopus-docs/pricing">Pricing</a>
+      <a href="https://www.dextopus.com/privacy/index.html">Privacy</a>
+      <a href="https://www.dextopus.com/terms/index.html">Terms</a>
+      <a href="https://dextopus.gitbook.io/dextopus-docs/support-and-contact">Contact</a>
+    </div>
+    <div class="foot-right">
+      <a href="https://x.com/dextopus" class="soc" target="_blank" rel="noopener" aria-label="X / Twitter">
+        <svg width="14" height="14" viewBox="0 0 1200 1227" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.163 519.284ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z"/></svg>
+      </a>
+      <a href="https://www.linkedin.com/company/dextopus/" class="soc" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/></svg>
+        LinkedIn
+      </a>
+      <span class="foot-copy">© 2025 Dextopus</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* TX WIDGET CYCLE */
+const txScenes = [
+  {type:'deposit', sendLabel:'User sends', recvLabel:'Business receives', sendAmt:'1,000.00 USDT', recvAmt:'999.12 USDC', sendChain:'Tron', recvChain:'Base', sendChainLogo:'https://assets.relay.link/icons/728126428/light.png', recvChainLogo:'https://assets.relay.link/icons/8453/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731', recvTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', time:'3.8s'},
+  {type:'deposit', sendLabel:'User sends', recvLabel:'Business receives', sendAmt:'0.021 BTC', recvAmt:'1,998.40 USDC', sendChain:'Bitcoin', recvChain:'Arbitrum', sendChainLogo:'https://assets.relay.link/icons/8253038/light.png', recvChainLogo:'https://assets.relay.link/icons/42161/light.png', sendTokLogo:'https://assets.relay.link/icons/currencies/btc.png', recvTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', time:'4.2s'},
+  {type:'withdraw', sendLabel:'Business sends', recvLabel:'User receives', sendAmt:'500.00 USDC', recvAmt:'0.0105 BTC', sendChain:'Base', recvChain:'Bitcoin', sendChainLogo:'https://assets.relay.link/icons/8453/light.png', recvChainLogo:'https://assets.relay.link/icons/8253038/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', recvTokLogo:'https://assets.relay.link/icons/currencies/btc.png', time:'4.9s'},
+  {type:'deposit', sendLabel:'User sends', recvLabel:'Business receives', sendAmt:'2.5 ETH', recvAmt:'4,980.00 USDC', sendChain:'Ethereum', recvChain:'Katana', sendChainLogo:'https://assets.relay.link/icons/1/light.png', recvChainLogo:'https://assets.relay.link/icons/747474/light.png', sendTokLogo:'https://assets.relay.link/icons/1/light.png', recvTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', time:'2.9s'},
+  {type:'deposit', sendLabel:'User sends', recvLabel:'Business receives', sendAmt:'800.00 USDC', recvAmt:'799.20 USDC', sendChain:'Celo', recvChain:'Optimism', sendChainLogo:'https://assets.relay.link/icons/42220/light.png', recvChainLogo:'https://assets.relay.link/icons/10/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', recvTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', time:'3.1s'},
+  {type:'withdraw', sendLabel:'Business sends', recvLabel:'User receives', sendAmt:'1,200.00 USDC', recvAmt:'1,197.60 USDT', sendChain:'Arbitrum', recvChain:'Tron', sendChainLogo:'https://assets.relay.link/icons/42161/light.png', recvChainLogo:'https://assets.relay.link/icons/728126428/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', recvTokLogo:'https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731', time:'4.1s'},
+  {type:'deposit', sendLabel:'User sends', recvLabel:'Business receives', sendAmt:'150.00 SOL', recvAmt:'19,650.00 USDC', sendChain:'Solana', recvChain:'Polygon', sendChainLogo:'https://assets.relay.link/icons/792703809/light.png', recvChainLogo:'https://assets.relay.link/icons/137/light.png', sendTokLogo:'https://upload.wikimedia.org/wikipedia/en/b/b9/Solana_logo.png', recvTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', time:'2.6s'},
+  {type:'deposit', sendLabel:'User sends', recvLabel:'Business receives', sendAmt:'5,000.00 USDT', recvAmt:'4,992.50 USDC', sendChain:'BNB Chain', recvChain:'Linea', sendChainLogo:'https://assets.relay.link/icons/56/light.png', recvChainLogo:'https://assets.relay.link/icons/59144/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731', recvTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', time:'3.4s'},
+  {type:'withdraw', sendLabel:'Business sends', recvLabel:'User receives', sendAmt:'300.00 USDC', recvAmt:'300.00 RON', sendChain:'Ethereum', recvChain:'Ronin', sendChainLogo:'https://assets.relay.link/icons/1/light.png', recvChainLogo:'https://assets.relay.link/icons/2020/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', recvTokLogo:'https://assets.relay.link/icons/currencies/ron.png', time:'3.7s'},
+  {type:'deposit', sendLabel:'User sends', recvLabel:'Business receives', sendAmt:'5,000.00 USDT', recvAmt:'4,992.50 USDC', sendChain:'Tron', recvChain:'Unichain', sendChainLogo:'https://assets.relay.link/icons/728126428/light.png', recvChainLogo:'https://assets.relay.link/icons/130/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/39963/large/usdt.png?1724952731', recvTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', time:'4.0s'},
+  {type:'deposit', sendLabel:'User sends', recvLabel:'Business receives', sendAmt:'0.025 WBTC', recvAmt:'2,492.10 USDC', sendChain:'Optimism', recvChain:'Base', sendChainLogo:'https://assets.relay.link/icons/10/light.png', recvChainLogo:'https://assets.relay.link/icons/100/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/7598/large/wrapped_bitcoin_wbtc.png?1696507857', recvTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', time:'3.3s'},
+  {type:'withdraw', sendLabel:'Business sends', recvLabel:'User receives', sendAmt:'2,000.00 USDC', recvAmt:'2,000.00 xDAI', sendChain:'Base', recvChain:'Gnosis', sendChainLogo:'https://assets.relay.link/icons/8453/light.png', recvChainLogo:'https://assets.relay.link/icons/100/light.png', sendTokLogo:'https://coin-images.coingecko.com/coins/images/6319/large/usdc.png?1696506694', recvTokLogo:'https://assets.relay.link/icons/currencies/xdai.png', time:'2.8s'},
+];
+
+let txIdx = 0;
+function updateTx(){
+  const s = txScenes[txIdx % txScenes.length];
+  const ids = [
+    ['tx-type','mob-tx-type'],['send-label','mob-send-label'],['recv-label','mob-recv-label'],
+    ['tx-send-amt','mob-tx-send-amt'],['tx-recv-amt','mob-tx-recv-amt'],
+    ['tx-send-chain','mob-tx-send-chain'],['tx-recv-chain','mob-tx-recv-chain'],
+    ['tx-arr','mob-tx-arr'],['tx-time-val','mob-tx-time-val']
+  ];
+  const typeClass = 'tx-type-badge ' + (s.type==='deposit'?'tx-type-deposit':'tx-type-withdraw');
+  const typeText = s.type==='deposit'?'Deposit':'Withdrawal';
+  const arrText = s.type==='deposit'?'↓':'↑';
+  ['tx-type','mob-tx-type'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.textContent=typeText;el.className=typeClass;}
+  });
+  [['send-label','mob-send-label'],[s.sendLabel]].flat;
+  const map={
+    'send-label':s.sendLabel,'mob-send-label':s.sendLabel,
+    'recv-label':s.recvLabel,'mob-recv-label':s.recvLabel,
+    'tx-send-amt':s.sendAmt,'mob-tx-send-amt':s.sendAmt,
+    'tx-recv-amt':s.recvAmt,'mob-tx-recv-amt':s.recvAmt,
+    'tx-send-chain':s.sendChain,'mob-tx-send-chain':s.sendChain,
+    'tx-recv-chain':s.recvChain,'mob-tx-recv-chain':s.recvChain,
+    'tx-arr':arrText,'mob-tx-arr':arrText,
+    'tx-time-val':s.time,'mob-tx-time-val':s.time
+  };
+  Object.entries(map).forEach(([id,val])=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent=val;
+  });
+  // update logos using backgroundImage (bypasses content-type CORS issue)
+  [['send-chain-logo','mob-send-chain-logo',s.sendChainLogo],
+   ['recv-chain-logo','mob-recv-chain-logo',s.recvChainLogo],
+   ['send-tok-logo','mob-send-tok-logo',s.sendTokLogo],
+   ['recv-tok-logo','mob-recv-tok-logo',s.recvTokLogo]
+  ].forEach(([id1,id2,src])=>{
+    [id1,id2].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.style.backgroundImage=`url('${src}')`;
+    });
+  });
+  txIdx++;
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  updateTx();
+  setInterval(()=>{
+    const mob = document.getElementById('mobile-tx');
+    if(mob) mob.style.opacity='0.4';
+    setTimeout(()=>{
+      updateTx();
+      if(mob) mob.style.opacity='1';
+    },250);
+  },4500);
+});
+
+/* GLOBE */
+(function(){
+  const canvas = document.getElementById('globe-canvas');
+  if(!canvas) return;
+
+  const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.z = 2.6;
+
+  function resize(){
+    const w = canvas.parentElement.offsetWidth;
+    const h = canvas.parentElement.offsetHeight;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  /* load real earth texture */
+  const loader = new THREE.TextureLoader();
+  loader.crossOrigin = 'anonymous';
+
+  const globeGeo = new THREE.SphereGeometry(1, 72, 72);
+  const globeMat = new THREE.MeshPhongMaterial({
+    color: 0x050d1a,
+    emissive: new THREE.Color(0x020810),
+    emissiveIntensity: 0.5,
+    shininess: 6,
+    specular: new THREE.Color(0x0a2040),
+  });
+  const globe = new THREE.Mesh(globeGeo, globeMat);
+  scene.add(globe);
+
+  /* try loading Blue Marble from unpkg (CORS open) */
+  loader.load(
+    'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+    tex => { globeMat.map = tex; globeMat.needsUpdate = true; },
+    undefined,
+    () => {
+      /* fallback canvas texture */
+      const W=2048,H=1024,c=document.createElement('canvas');
+      c.width=W;c.height=H;
+      const ctx=c.getContext('2d');
+      const og=ctx.createLinearGradient(0,0,0,H);
+      og.addColorStop(0,'#020c1a');og.addColorStop(.5,'#04152a');og.addColorStop(1,'#020c1a');
+      ctx.fillStyle=og;ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='rgba(8,30,70,0.2)';ctx.lineWidth=0.5;
+      for(let i=-80;i<=80;i+=10){const y=(90-i)/180*H;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+      for(let i=-180;i<180;i+=10){const x=(i+180)/360*W;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+      function p(lo,la){return[(lo+180)/360*W,(90-la)/180*H];}
+      function poly(pts,f){ctx.beginPath();pts.forEach(([lo,la],i)=>{const[x,y]=p(lo,la);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();ctx.fillStyle=f;ctx.fill();ctx.strokeStyle='#1c4060';ctx.lineWidth=1.2;ctx.stroke();}
+      const L='#0c1e32';
+      poly([[-168,72],[-140,70],[-124,47],[-97,26],[-83,10],[-77,7],[-90,18],[-117,32],[-130,56],[-168,64]],L);
+      poly([[-95,48],[-65,44],[-55,50],[-75,70],[-95,75],[-125,70],[-120,60],[-100,49]],L);
+      poly([[-55,83],[-20,84],[-15,78],[-40,66],[-60,72]],L);
+      poly([[-80,12],[-52,5],[-35,-4],[-45,-23],[-68,-50],[-68,-56],[-73,-46],[-70,-18],[-80,5]],L);
+      poly([[-10,36],[14,44],[28,42],[30,46],[20,55],[0,60],[-8,52]],L);
+      poly([[5,58],[20,63],[25,68],[28,71],[20,70],[12,63],[8,60]],L);
+      poly([[-5,50],[2,52],[-4,57],[-3,60],[-1,60],[0,57],[-2,52]],L);
+      poly([[-18,15],[42,12],[44,15],[42,20],[35,30],[32,32],[15,33],[0,35],[-15,30]],L);
+      poly([[35,5],[50,12],[44,11],[42,12]],L);
+      poly([[14,-22],[36,-22],[37,-35],[25,-34],[17,-29]],L);
+      poly([[26,42],[70,55],[90,58],[120,45],[130,40],[125,28],[100,5],[100,2],[115,-8],[120,0],[95,20],[50,28],[35,42]],L);
+      poly([[35,30],[58,24],[57,20],[50,12],[44,11],[42,20],[38,22]],L);
+      poly([[65,22],[76,18],[80,8],[79,20],[75,28]],L);
+      poly([[114,-22],[150,-22],[154,-28],[150,-36],[138,-36],[114,-25]],L);
+      poly([[131,31],[138,40],[142,40],[140,36],[135,34]],L);
+      globeMat.map = new THREE.CanvasTexture(c);
+      globeMat.needsUpdate = true;
+    }
+  );
+
+  /* atmosphere */
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.055,32,32),
+    new THREE.MeshBasicMaterial({color:0x1a6fff,transparent:true,opacity:0.06,side:THREE.BackSide})));
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.10,32,32),
+    new THREE.MeshBasicMaterial({color:0xFFB800,transparent:true,opacity:0.018,side:THREE.BackSide})));
+
+  function ll(lat,lon,r){
+    r = r||1.013;
+    const phi=(90-lat)*Math.PI/180, th=(lon+180)*Math.PI/180;
+    return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(th), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(th));
+  }
+
+  const COLORS=[0xef4444,0xf97316,0x818cf8,0x3b82f6,0xa855f7,0xeab308,0x60a5fa,0x8b5cf6,0xf87171,0x10b981,0x06b6d4,0x34d399,0x94a3b8,0xfbbf24];
+
+  /* 40 cities across all continents */
+  const CITIES=[
+    [6.5,3.4],[9.0,7.5],[5.6,-0.2],[-1.3,36.8],[-33.9,18.4],[30.0,31.2],[4.0,9.7],[14.7,-17.4],[-18.9,47.5],[15.6,32.5],
+    [51.5,-0.12],[48.8,2.35],[52.5,13.4],[41.9,12.5],[40.4,-3.7],[59.9,10.7],[52.4,4.9],[60.2,24.9],[47.4,8.5],[55.7,12.5],
+    [40.7,-74.0],[37.8,-122.4],[45.5,-73.5],[19.4,-99.1],[-23.5,-46.6],[-34.6,-58.4],[4.7,-74.1],[10.5,-66.9],[-12.0,-77.0],[33.4,-112.1],
+    [35.7,139.7],[31.2,121.5],[1.35,103.8],[28.6,77.2],[25.2,55.3],[37.6,126.9],[22.3,114.2],[3.1,101.7],[-27.5,153.0],[-33.9,151.2],
+  ];
+
+  CITIES.forEach(([lat,lon],i)=>{
+    const d=new THREE.Mesh(new THREE.SphereGeometry(0.011,8,8),new THREE.MeshBasicMaterial({color:COLORS[i%COLORS.length]}));
+    d.position.copy(ll(lat,lon));
+    globe.add(d);
+  });
+
+  /* 100 routes — cross-ocean, within continent, everything */
+  const PAIRS=[
+    [0,20],[1,20],[2,10],[3,30],[4,21],[5,11],[6,20],[7,10],[8,32],[9,10],
+    [10,30],[11,24],[12,11],[13,21],[14,12],[15,11],[16,12],[17,20],[18,30],[19,10],
+    [20,30],[21,31],[22,10],[23,32],[24,10],[25,11],[26,20],[27,21],[28,10],[29,30],
+    [30,20],[31,21],[32,24],[33,11],[34,12],[35,30],[36,32],[37,24],[38,10],[39,20],
+    [0,30],[1,31],[4,32],[5,33],[6,34],[7,35],[2,22],[3,23],[8,38],[9,39],
+    [10,36],[11,37],[12,38],[13,39],[14,30],[15,31],[16,32],[17,33],[18,34],[19,35],
+    [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[7,8],[9,0],[10,11],[11,12],
+    [12,13],[13,14],[20,21],[21,22],[22,23],[23,24],[24,25],[30,31],[31,32],[32,33],
+    [33,34],[34,35],[35,36],[36,37],[37,38],[38,39],[4,30],[0,32],[5,30],[4,34],
+    [2,30],[8,20],[9,21],[6,22],[7,23],[3,37],[0,10],[1,11],[2,12],[3,13],
+  ];
+
+  const routes=[];
+  PAIRS.forEach(([fi,ti],idx)=>{
+    if(fi>=CITIES.length||ti>=CITIES.length||fi===ti) return;
+    const col=COLORS[idx%COLORS.length];
+    const s=ll(CITIES[fi][0],CITIES[fi][1]);
+    const e=ll(CITIES[ti][0],CITIES[ti][1]);
+    const arcH=1.48+Math.random()*0.2;
+    const mid=s.clone().add(e).multiplyScalar(0.5).normalize().multiplyScalar(arcH);
+    const curve=new THREE.QuadraticBezierCurve3(s,mid,e);
+    const arcMat=new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0});
+    const arc=new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(80)),arcMat);
+    globe.add(arc);
+    const dotMat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0});
+    const dot=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,8),dotMat);
+    globe.add(dot);
+    routes.push({curve,arc,dot,t:Math.random(),speed:0.015+Math.random()*0.008});
+  });
+
+  scene.add(new THREE.AmbientLight(0x223355,1.1));
+  const sun=new THREE.DirectionalLight(0xffffff,1.3);sun.position.set(4,2,3);scene.add(sun);
+  const rim=new THREE.DirectionalLight(0x4466bb,0.35);rim.position.set(-3,-1,-2);scene.add(rim);
+
+  let gT=2.1;
+  function animate(){
+    requestAnimationFrame(animate);
+    gT+=0.006;
+    globe.rotation.y=gT*0.27;
+    routes.forEach(r=>{
+      r.t+=r.speed;
+      if(r.t>1) r.t-=1;
+      const fade=Math.sin(r.t*Math.PI);
+      r.arc.material.opacity=fade*0.85;
+      r.dot.material.opacity=Math.min(fade*3,1);
+      r.dot.position.copy(r.curve.getPoint(r.t));
+    });
+    renderer.render(scene,camera);
+  }
+  animate();
+})();
+
+/* HAMBURGER */
+function toggleMenu(){
+  const m = document.getElementById('mobile-menu');
+  m.classList.toggle('open');
+}
+document.querySelectorAll('.mobile-menu a').forEach(a=>{
+  a.addEventListener('click',()=>document.getElementById('mobile-menu').classList.remove('open'));
+});
+
+/* SCROLL REVEAL */
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting) e.target.classList.add('in');});
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
