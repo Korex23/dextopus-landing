@@ -65,7 +65,7 @@ export default function Hero({ globe, transactionWidget }: HeroProps) {
         <div className="space-y-8 lg:pl-[6.5vw] lg:pr-10">
           <div className="space-y-4">
             <h1 className="text-4xl md:text-5xl lg:text-[50px] font-extrabold leading-tight overflow-hidden max-w-full">
-              <span>Cross-chain deposit and withdrawal for</span>
+              <span>Turn chain expansion into revenue for</span>
               <span className="block w-full max-w-full">
                 <span className="text-gradient inline-flex max-w-full flex-wrap items-baseline break-words">
                   {typedText}
