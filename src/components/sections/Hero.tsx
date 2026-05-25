@@ -105,7 +105,7 @@ export default function Hero({ globe, transactionWidget }: HeroProps) {
         {/* Right Content - Globe */}
         <div
           className="relative hidden lg:block"
-          style={{ height: 'calc(100vh - 60px)', minHeight: '480px' }}
+          style={{ height: 'calc(100vh - 80px)', minHeight: '450px' }}
         >
           {globe || (
             <div className="w-full h-full bg-background-dark rounded-2xl border border-border flex items-center justify-center">
